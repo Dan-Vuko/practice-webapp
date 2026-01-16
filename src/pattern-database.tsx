@@ -463,8 +463,8 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                             {pattern.target_bpm}
                           </span>
                         )}
-                        <span className="text-gray-500" title="Sessions">{sessionCounts[pattern.id] || 0} sess</span>
-                        <span className="text-gray-500" title="Practice time">{pattern.total_practice_minutes} min</span>
+                        <span className="text-gray-500" title="Sessions">{sessionCounts[pattern.id] || 0} sessions</span>
+                        <span className="text-gray-500" title="Practice time">{pattern.total_practice_minutes} minutes</span>
                         <span className="text-gray-500" title="Total reps">{pattern.total_reps} reps</span>
                       </div>
                       {pattern.comment && (
