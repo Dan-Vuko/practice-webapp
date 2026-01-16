@@ -69,9 +69,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signInWithGoogle = async () => {
-    const redirectUrl = import.meta.env.PROD
-      ? 'https://practice-webapp-speedbuilder.vercel.app'
-      : window.location.origin
+    // Always redirect to production URL for Google OAuth
+    const redirectUrl = 'https://practice-webapp-speedbuilder.vercel.app'
 
     await supabase.auth.signInWithOAuth({
       provider: 'google',
