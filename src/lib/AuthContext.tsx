@@ -1,13 +1,17 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { supabase } from './supabase'
 
 interface AdminUser {
   username: string
+  email?: string
+  isGoogleUser?: boolean
 }
 
 interface AuthContextType {
   user: AdminUser | null
   loading: boolean
   signInAsAdmin: (username: string) => void
+  signInWithGoogle: () => Promise<void>
   signOut: () => void
 }
 
@@ -20,16 +24,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Check localStorage for existing session
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored))
-      } catch {
-        localStorage.removeItem(STORAGE_KEY)
+    // Check for Supabase session first
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({
+          username: session.user.email || 'Google User',
+          email: session.user.email,
+          isGoogleUser: true
+        })
+        setLoading(false)
+        return
       }
-    }
-    setLoading(false)
+
+      // Fall back to localStorage admin
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (stored) {
+        try {
+          setUser(JSON.parse(stored))
+        } catch {
+          localStorage.removeItem(STORAGE_KEY)
+        }
+      }
+      setLoading(false)
+    })
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser({
+          username: session.user.email || 'Google User',
+          email: session.user.email,
+          isGoogleUser: true
+        })
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   const signInAsAdmin = (username: string) => {
@@ -38,13 +68,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(adminUser))
   }
 
-  const signOut = () => {
+  const signInWithGoogle = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin
+      }
+    })
+  }
+
+  const signOut = async () => {
+    // Sign out from Supabase if Google user
+    if (user?.isGoogleUser) {
+      await supabase.auth.signOut()
+    }
     setUser(null)
     localStorage.removeItem(STORAGE_KEY)
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInAsAdmin, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signInAsAdmin, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   )

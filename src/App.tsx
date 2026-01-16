@@ -229,9 +229,13 @@ function App() {
   }, [clickCount, subdivision, microBurstMode])
 
   const handleAddPattern = async () => {
+    const pattern = PATTERNS.find(p => p.id === newPatternId)
+    if (!pattern) return
+
     await db.createUserPatternProgress({
-      pattern_id: newPatternId,
-      string_set: 'default', // String set not used, just a placeholder
+      pattern_id: String(newPatternId),
+      pattern_name: pattern.pattern,
+      string_set: 'default',
       current_bpm: newStartingBpm,
       target_bpm: newTargetBpm,
       max_bpm_achieved: newStartingBpm,

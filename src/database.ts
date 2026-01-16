@@ -1,6 +1,7 @@
 /**
  * Database Layer for Speed Builder
- * Uses Supabase for multi-user data storage with row-level security
+ * Uses Supabase for multi-user progress tracking
+ * Patterns are managed in localStorage (pattern-database.tsx)
  */
 
 import { supabase } from './lib/supabase'
@@ -12,16 +13,11 @@ const ADMIN_USER_ID = '00000000-0000-0000-0000-000000000001'
 // ENTITIES
 // ==========================================
 
-export interface PatternEntity {
-  id: number;
-  pattern: string;
-  sequence: number[];
-}
-
 export interface UserPatternProgressEntity {
   id: string;
   user_id?: string;
-  pattern_id: number;
+  pattern_id: string;
+  pattern_name: string;
   string_set: string;
   current_bpm: number;
   target_bpm: number;
@@ -74,32 +70,30 @@ export interface PersonalBestEntity {
   session_id: string;
 }
 
+// Legacy interface for compatibility
+export interface PatternEntity {
+  id: number;
+  pattern: string;
+  sequence: number[];
+}
+
 // ==========================================
 // DATABASE CLASS
 // ==========================================
 
 class SpeedBuilderDB {
   async init(): Promise<void> {
-    // No initialization needed - Supabase handles everything
-    // Patterns are seeded via SQL migration
+    // No initialization needed
   }
 
-  // ==========================================
-  // PATTERN OPERATIONS
-  // ==========================================
-
+  // Legacy methods for compatibility with existing code
   async seedPatterns(_patterns: PatternEntity[]): Promise<void> {
-    // Patterns are seeded via SQL, no-op here
+    // No-op - patterns are managed in localStorage
   }
 
   async getAllPatterns(): Promise<PatternEntity[]> {
-    const { data, error } = await supabase
-      .from('patterns')
-      .select('*')
-      .order('id')
-
-    if (error) throw error
-    return data || []
+    // Return empty - patterns come from localStorage
+    return []
   }
 
   // ==========================================
@@ -112,6 +106,7 @@ class SpeedBuilderDB {
       .insert({
         user_id: ADMIN_USER_ID,
         pattern_id: data.pattern_id,
+        pattern_name: data.pattern_name,
         string_set: data.string_set,
         current_bpm: data.current_bpm,
         target_bpm: data.target_bpm,
@@ -129,10 +124,11 @@ class SpeedBuilderDB {
     return result.id
   }
 
-  async getUserPatternProgress(patternId: number, stringSet: string): Promise<UserPatternProgressEntity | null> {
+  async getUserPatternProgress(patternId: string, stringSet: string): Promise<UserPatternProgressEntity | null> {
     const { data, error } = await supabase
       .from('user_pattern_progress')
       .select('*')
+      .eq('user_id', ADMIN_USER_ID)
       .eq('pattern_id', patternId)
       .eq('string_set', stringSet)
       .maybeSingle()
@@ -142,7 +138,6 @@ class SpeedBuilderDB {
   }
 
   async updateUserPatternProgress(id: string, updates: Partial<UserPatternProgressEntity>): Promise<void> {
-    // Remove fields that shouldn't be updated
     const { id: _id, user_id: _userId, created_at: _created, ...updateData } = updates
 
     const { error } = await supabase
@@ -157,10 +152,20 @@ class SpeedBuilderDB {
     const { data, error } = await supabase
       .from('user_pattern_progress')
       .select('*')
+      .eq('user_id', ADMIN_USER_ID)
       .order('last_practiced', { ascending: false, nullsFirst: false })
 
     if (error) throw error
     return data || []
+  }
+
+  async deleteUserPatternProgress(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('user_pattern_progress')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
   }
 
   // ==========================================

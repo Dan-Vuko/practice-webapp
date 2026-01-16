@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { db, UserPatternProgressEntity } from './database'
-import { PATTERNS } from './patterns'
 
 export function ProgressTracker() {
   const [progressData, setProgressData] = useState<UserPatternProgressEntity[]>([])
@@ -17,10 +16,6 @@ export function ProgressTracker() {
       const bTime = b.last_practiced ? new Date(b.last_practiced).getTime() : 0
       return bTime - aTime
     }))
-  }
-
-  const getPatternName = (patternId: number) => {
-    return PATTERNS.find(p => p.id === patternId)?.pattern || '?'
   }
 
   const formatDate = (isoDate: string | null) => {
@@ -80,7 +75,7 @@ export function ProgressTracker() {
                     }`}
                   >
                     <td className="py-3 px-3">
-                      <span className="font-mono font-bold text-purple-400">{getPatternName(row.pattern_id)}</span>
+                      <span className="font-mono font-bold text-purple-400">{row.pattern_name}</span>
                     </td>
                     <td className="py-3 px-3 text-gray-300 font-mono text-sm">{row.string_set}</td>
                     <td className="py-3 px-3">

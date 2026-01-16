@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd Supabase authentication and multi-user database support\n\n- Add login/signup page with email/password authentication\n- Migrate from IndexedDB to Supabase for cloud data storage\n- Add row-level security for per-user data isolation\n- Add sign-out button to main app header\n- Include SQL schema with RLS policies\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd GitHub Actions CI pipeline\n\n- Run TypeScript type checking on PRs and pushes\n- Build validation before deployment\n- Requires Supabase secrets to be set in GitHub\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(npm run dev:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
+    ]
+  }
+}
