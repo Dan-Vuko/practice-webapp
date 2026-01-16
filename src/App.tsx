@@ -233,9 +233,7 @@ function App() {
     if (!pattern) return
 
     await db.createUserPatternProgress({
-      pattern_id: String(newPatternId),
       pattern_name: pattern.pattern,
-      string_set: 'default',
       current_bpm: newStartingBpm,
       target_bpm: newTargetBpm,
       max_bpm_achieved: newStartingBpm,

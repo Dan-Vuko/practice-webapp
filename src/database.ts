@@ -25,9 +25,7 @@ async function getCurrentUserId(): Promise<string> {
 export interface UserPatternProgressEntity {
   id: string;
   user_id?: string;
-  pattern_id: string;
   pattern_name: string;
-  string_set: string;
   current_bpm: number;
   target_bpm: number;
   max_bpm_achieved: number;
@@ -115,9 +113,7 @@ class SpeedBuilderDB {
       .from('user_pattern_progress')
       .insert({
         user_id: userId,
-        pattern_id: data.pattern_id,
         pattern_name: data.pattern_name,
-        string_set: data.string_set,
         current_bpm: data.current_bpm,
         target_bpm: data.target_bpm,
         max_bpm_achieved: data.max_bpm_achieved,
@@ -134,14 +130,13 @@ class SpeedBuilderDB {
     return result.id
   }
 
-  async getUserPatternProgress(patternId: string, stringSet: string): Promise<UserPatternProgressEntity | null> {
+  async getUserPatternProgress(patternName: string): Promise<UserPatternProgressEntity | null> {
     const userId = await getCurrentUserId()
     const { data, error } = await supabase
       .from('user_pattern_progress')
       .select('*')
       .eq('user_id', userId)
-      .eq('pattern_id', patternId)
-      .eq('string_set', stringSet)
+      .eq('pattern_name', patternName)
       .maybeSingle()
 
     if (error) throw error

@@ -50,7 +50,6 @@ export function ProgressTracker() {
             <thead>
               <tr className="border-b border-gray-700">
                 <th className="pb-3 px-3 text-gray-400 font-semibold text-sm">Pattern</th>
-                <th className="pb-3 px-3 text-gray-400 font-semibold text-sm">Strings</th>
                 <th className="pb-3 px-3 text-gray-400 font-semibold text-sm">Current BPM</th>
                 <th className="pb-3 px-3 text-gray-400 font-semibold text-sm">Target BPM</th>
                 <th className="pb-3 px-3 text-gray-400 font-semibold text-sm">Max BPM</th>
@@ -77,7 +76,6 @@ export function ProgressTracker() {
                     <td className="py-3 px-3">
                       <span className="font-mono font-bold text-purple-400">{row.pattern_name}</span>
                     </td>
-                    <td className="py-3 px-3 text-gray-300 font-mono text-sm">{row.string_set}</td>
                     <td className="py-3 px-3">
                       <span className="font-bold text-blue-400">{row.current_bpm}</span>
                     </td>

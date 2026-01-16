@@ -28,7 +28,7 @@ export function Analytics({ progress, onClose }: AnalyticsProps) {
 
       if (data.success) {
         // Filter workouts for this pattern
-        const patternWorkouts = data.workouts.filter((w: any) => w.pattern_id === (progress.pattern_id || progress.id))
+        const patternWorkouts = data.workouts.filter((w: any) => w.pattern_name === progress.pattern_name)
 
         // Convert to session format
         const sessionData = patternWorkouts.map((w: any) => ({
@@ -136,7 +136,7 @@ export function Analytics({ progress, onClose }: AnalyticsProps) {
       <div className="bg-gray-900 rounded-lg border border-gray-700 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-gray-900 border-b border-gray-700 p-6 flex justify-between items-center">
           <h2 className="text-2xl font-bold text-white">
-            Analytics: Pattern {(progress as any).name || progress.pattern_id}
+            Analytics: Pattern {progress.pattern_name}
           </h2>
           <button
             onClick={onClose}

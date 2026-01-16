@@ -8,13 +8,10 @@ DROP TABLE IF EXISTS sessions CASCADE;
 DROP TABLE IF EXISTS user_pattern_progress CASCADE;
 
 -- User Pattern Progress (per-user data)
--- pattern_id is a string that matches the localStorage pattern id
 CREATE TABLE IF NOT EXISTS user_pattern_progress (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
-  pattern_id TEXT NOT NULL,
   pattern_name TEXT NOT NULL,
-  string_set TEXT NOT NULL DEFAULT 'default',
   current_bpm INTEGER DEFAULT 60,
   target_bpm INTEGER DEFAULT 150,
   max_bpm_achieved INTEGER DEFAULT 60,
@@ -24,7 +21,7 @@ CREATE TABLE IF NOT EXISTS user_pattern_progress (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   current_cycle_week INTEGER DEFAULT 1,
   cycle_start_date TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(user_id, pattern_id)
+  UNIQUE(user_id, pattern_name)
 );
 
 -- Sessions (per-user data)
