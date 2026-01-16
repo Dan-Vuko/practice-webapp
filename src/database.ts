@@ -9,6 +9,15 @@ import { supabase } from './lib/supabase'
 // Fixed admin user ID for testing (bypasses Supabase auth)
 const ADMIN_USER_ID = '00000000-0000-0000-0000-000000000001'
 
+// Get current user ID - returns Supabase user ID for Google users, or admin ID for local login
+async function getCurrentUserId(): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) {
+    return user.id // Google user's actual Supabase ID
+  }
+  return ADMIN_USER_ID // Fallback for admin login
+}
+
 // ==========================================
 // ENTITIES
 // ==========================================
@@ -101,10 +110,11 @@ class SpeedBuilderDB {
   // ==========================================
 
   async createUserPatternProgress(data: Omit<UserPatternProgressEntity, 'id' | 'created_at' | 'user_id'>): Promise<string> {
+    const userId = await getCurrentUserId()
     const { data: result, error } = await supabase
       .from('user_pattern_progress')
       .insert({
-        user_id: ADMIN_USER_ID,
+        user_id: userId,
         pattern_id: data.pattern_id,
         pattern_name: data.pattern_name,
         string_set: data.string_set,
@@ -125,10 +135,11 @@ class SpeedBuilderDB {
   }
 
   async getUserPatternProgress(patternId: string, stringSet: string): Promise<UserPatternProgressEntity | null> {
+    const userId = await getCurrentUserId()
     const { data, error } = await supabase
       .from('user_pattern_progress')
       .select('*')
-      .eq('user_id', ADMIN_USER_ID)
+      .eq('user_id', userId)
       .eq('pattern_id', patternId)
       .eq('string_set', stringSet)
       .maybeSingle()
@@ -149,10 +160,11 @@ class SpeedBuilderDB {
   }
 
   async getAllUserProgress(): Promise<UserPatternProgressEntity[]> {
+    const userId = await getCurrentUserId()
     const { data, error } = await supabase
       .from('user_pattern_progress')
       .select('*')
-      .eq('user_id', ADMIN_USER_ID)
+      .eq('user_id', userId)
       .order('last_practiced', { ascending: false, nullsFirst: false })
 
     if (error) throw error
@@ -173,10 +185,11 @@ class SpeedBuilderDB {
   // ==========================================
 
   async createSession(data: Omit<SessionEntity, 'id' | 'user_id'>): Promise<string> {
+    const userId = await getCurrentUserId()
     const { data: result, error } = await supabase
       .from('sessions')
       .insert({
-        user_id: ADMIN_USER_ID,
+        user_id: userId,
         ...data,
       })
       .select('id')
@@ -211,10 +224,11 @@ class SpeedBuilderDB {
   // ==========================================
 
   async createAttempt(data: Omit<AttemptEntity, 'id' | 'user_id'>): Promise<string> {
+    const userId = await getCurrentUserId()
     const { data: result, error } = await supabase
       .from('attempts')
       .insert({
-        user_id: ADMIN_USER_ID,
+        user_id: userId,
         ...data,
       })
       .select('id')
@@ -240,10 +254,11 @@ class SpeedBuilderDB {
   // ==========================================
 
   async createPersonalBest(data: Omit<PersonalBestEntity, 'id' | 'user_id'>): Promise<string> {
+    const userId = await getCurrentUserId()
     const { data: result, error } = await supabase
       .from('personal_bests')
       .insert({
-        user_id: ADMIN_USER_ID,
+        user_id: userId,
         ...data,
       })
       .select('id')
