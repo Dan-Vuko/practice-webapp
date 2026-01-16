@@ -1,0 +1,28 @@
+{
+  "id": "mock-workout-4",
+  "pattern_id": "pattern-1",
+  "pattern_name": "1213",
+  "date": "2024-01-08T10:00:00.000Z",
+  "duration_minutes": 20,
+  "practice_minutes": 18,
+  "starting_bpm": 72,
+  "ending_bpm": 78,
+  "total_reps": 200,
+  "exercises": [
+    {
+      "type": "baseline",
+      "tempo": 72,
+      "time_spent": 300
+    },
+    {
+      "type": "microburst",
+      "tempo": 75,
+      "time_spent": 600
+    },
+    {
+      "type": "recovery",
+      "tempo": 72,
+      "time_spent": 180
+    }
+  ]
+}
