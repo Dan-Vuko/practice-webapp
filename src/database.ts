@@ -1,7 +1,9 @@
 /**
  * Database Layer for Speed Builder
- * Tracks user progress for each pattern + string set combination
+ * Uses Supabase for multi-user data storage with row-level security
  */
+
+import { supabase } from './lib/supabase'
 
 // ==========================================
 // ENTITIES
@@ -14,58 +16,58 @@ export interface PatternEntity {
 }
 
 export interface UserPatternProgressEntity {
-  id: string; // UUID
+  id: string;
+  user_id?: string;
   pattern_id: number;
-  string_set: string; // "3-4-5" format
+  string_set: string;
   current_bpm: number;
   target_bpm: number;
   max_bpm_achieved: number;
   total_practice_minutes: number;
   total_sessions: number;
-  last_practiced: string; // ISO date
-  created_at: string; // ISO date
-
-  // Myelination tracking
-  current_cycle_week: number; // 1-4
-  cycle_start_date: string; // ISO date
+  last_practiced: string | null;
+  created_at: string;
+  current_cycle_week: number;
+  cycle_start_date: string;
 }
 
 export interface SessionEntity {
-  id: string; // UUID
+  id: string;
+  user_id?: string;
   user_pattern_progress_id: string;
-  start_time: string; // ISO date
-  end_time: string; // ISO date
+  start_time: string;
+  end_time: string;
   duration_minutes: number;
   starting_bpm: number;
   ending_bpm: number;
   avg_accuracy: number;
   total_attempts: number;
   successful_attempts: number;
-
-  // Neurophysiology tracking
   myelination_cycle_week: number;
   hours_since_last_session: number;
   in_consolidation_window: boolean;
 }
 
 export interface AttemptEntity {
-  id: string; // UUID
+  id: string;
+  user_id?: string;
   session_id: string;
   attempt_number: number;
   tempo: number;
-  accuracy: number; // 0-1
+  accuracy: number;
   notes_played: number;
   notes_correct: number;
-  timestamp: string; // ISO date
+  timestamp: string;
   tension_detected: boolean;
 }
 
 export interface PersonalBestEntity {
-  id: string; // UUID
+  id: string;
+  user_id?: string;
   user_pattern_progress_id: string;
   metric_type: 'max_bpm' | 'max_bpm_100_accuracy' | 'longest_streak' | 'fastest_improvement';
   value: number;
-  achieved_at: string; // ISO date
+  achieved_at: string;
   session_id: string;
 }
 
@@ -74,283 +76,197 @@ export interface PersonalBestEntity {
 // ==========================================
 
 class SpeedBuilderDB {
-  private dbName = 'speed_builder_db';
-  private version = 1;
-  private db: IDBDatabase | null = null;
-
   async init(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, this.version);
-
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        this.db = request.result;
-        resolve();
-      };
-
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-
-        // Patterns store
-        if (!db.objectStoreNames.contains('patterns')) {
-          const patternStore = db.createObjectStore('patterns', { keyPath: 'id' });
-          patternStore.createIndex('pattern', 'pattern', { unique: true });
-        }
-
-        // User Pattern Progress store
-        if (!db.objectStoreNames.contains('user_pattern_progress')) {
-          const progressStore = db.createObjectStore('user_pattern_progress', { keyPath: 'id' });
-          progressStore.createIndex('pattern_id', 'pattern_id', { unique: false });
-          progressStore.createIndex('string_set', 'string_set', { unique: false });
-          progressStore.createIndex('last_practiced', 'last_practiced', { unique: false });
-        }
-
-        // Sessions store
-        if (!db.objectStoreNames.contains('sessions')) {
-          const sessionStore = db.createObjectStore('sessions', { keyPath: 'id' });
-          sessionStore.createIndex('user_pattern_progress_id', 'user_pattern_progress_id', { unique: false });
-          sessionStore.createIndex('start_time', 'start_time', { unique: false });
-        }
-
-        // Attempts store
-        if (!db.objectStoreNames.contains('attempts')) {
-          const attemptStore = db.createObjectStore('attempts', { keyPath: 'id' });
-          attemptStore.createIndex('session_id', 'session_id', { unique: false });
-        }
-
-        // Personal Bests store
-        if (!db.objectStoreNames.contains('personal_bests')) {
-          const pbStore = db.createObjectStore('personal_bests', { keyPath: 'id' });
-          pbStore.createIndex('user_pattern_progress_id', 'user_pattern_progress_id', { unique: false });
-          pbStore.createIndex('metric_type', 'metric_type', { unique: false });
-        }
-      };
-    });
+    // No initialization needed - Supabase handles everything
+    // Patterns are seeded via SQL migration
   }
 
   // ==========================================
   // PATTERN OPERATIONS
   // ==========================================
 
-  async seedPatterns(patterns: PatternEntity[]): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    const transaction = this.db.transaction(['patterns'], 'readwrite');
-    const store = transaction.objectStore('patterns');
-
-    for (const pattern of patterns) {
-      await store.put(pattern);
-    }
+  async seedPatterns(_patterns: PatternEntity[]): Promise<void> {
+    // Patterns are seeded via SQL, no-op here
   }
 
   async getAllPatterns(): Promise<PatternEntity[]> {
-    if (!this.db) throw new Error('Database not initialized');
+    const { data, error } = await supabase
+      .from('patterns')
+      .select('*')
+      .order('id')
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['patterns'], 'readonly');
-      const store = transaction.objectStore('patterns');
-      const request = store.getAll();
-
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    if (error) throw error
+    return data || []
   }
 
   // ==========================================
   // USER PATTERN PROGRESS OPERATIONS
   // ==========================================
 
-  async createUserPatternProgress(data: Omit<UserPatternProgressEntity, 'id' | 'created_at'>): Promise<string> {
-    if (!this.db) throw new Error('Database not initialized');
+  async createUserPatternProgress(data: Omit<UserPatternProgressEntity, 'id' | 'created_at' | 'user_id'>): Promise<string> {
+    const { data: user } = await supabase.auth.getUser()
+    if (!user.user) throw new Error('Not authenticated')
 
-    const id = crypto.randomUUID();
-    const entity: UserPatternProgressEntity = {
-      ...data,
-      id,
-      created_at: new Date().toISOString(),
-    };
+    const { data: result, error } = await supabase
+      .from('user_pattern_progress')
+      .insert({
+        user_id: user.user.id,
+        pattern_id: data.pattern_id,
+        string_set: data.string_set,
+        current_bpm: data.current_bpm,
+        target_bpm: data.target_bpm,
+        max_bpm_achieved: data.max_bpm_achieved,
+        total_practice_minutes: data.total_practice_minutes,
+        total_sessions: data.total_sessions,
+        last_practiced: data.last_practiced,
+        current_cycle_week: data.current_cycle_week,
+        cycle_start_date: data.cycle_start_date,
+      })
+      .select('id')
+      .single()
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['user_pattern_progress'], 'readwrite');
-      const store = transaction.objectStore('user_pattern_progress');
-      const request = store.add(entity);
-
-      request.onsuccess = () => resolve(id);
-      request.onerror = () => reject(request.error);
-    });
+    if (error) throw error
+    return result.id
   }
 
   async getUserPatternProgress(patternId: number, stringSet: string): Promise<UserPatternProgressEntity | null> {
-    if (!this.db) throw new Error('Database not initialized');
+    const { data, error } = await supabase
+      .from('user_pattern_progress')
+      .select('*')
+      .eq('pattern_id', patternId)
+      .eq('string_set', stringSet)
+      .maybeSingle()
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['user_pattern_progress'], 'readonly');
-      const store = transaction.objectStore('user_pattern_progress');
-      const request = store.getAll();
-
-      request.onsuccess = () => {
-        const results = request.result as UserPatternProgressEntity[];
-        const match = results.find(r => r.pattern_id === patternId && r.string_set === stringSet);
-        resolve(match || null);
-      };
-      request.onerror = () => reject(request.error);
-    });
+    if (error) throw error
+    return data
   }
 
   async updateUserPatternProgress(id: string, updates: Partial<UserPatternProgressEntity>): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
+    // Remove fields that shouldn't be updated
+    const { id: _id, user_id: _userId, created_at: _created, ...updateData } = updates
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['user_pattern_progress'], 'readwrite');
-      const store = transaction.objectStore('user_pattern_progress');
-      const getRequest = store.get(id);
+    const { error } = await supabase
+      .from('user_pattern_progress')
+      .update(updateData)
+      .eq('id', id)
 
-      getRequest.onsuccess = () => {
-        const existing = getRequest.result;
-        if (!existing) {
-          reject(new Error('Progress record not found'));
-          return;
-        }
-
-        const updated = { ...existing, ...updates };
-        const putRequest = store.put(updated);
-
-        putRequest.onsuccess = () => resolve();
-        putRequest.onerror = () => reject(putRequest.error);
-      };
-
-      getRequest.onerror = () => reject(getRequest.error);
-    });
+    if (error) throw error
   }
 
   async getAllUserProgress(): Promise<UserPatternProgressEntity[]> {
-    if (!this.db) throw new Error('Database not initialized');
+    const { data, error } = await supabase
+      .from('user_pattern_progress')
+      .select('*')
+      .order('last_practiced', { ascending: false, nullsFirst: false })
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['user_pattern_progress'], 'readonly');
-      const store = transaction.objectStore('user_pattern_progress');
-      const request = store.getAll();
-
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    if (error) throw error
+    return data || []
   }
 
   // ==========================================
   // SESSION OPERATIONS
   // ==========================================
 
-  async createSession(data: Omit<SessionEntity, 'id'>): Promise<string> {
-    if (!this.db) throw new Error('Database not initialized');
+  async createSession(data: Omit<SessionEntity, 'id' | 'user_id'>): Promise<string> {
+    const { data: user } = await supabase.auth.getUser()
+    if (!user.user) throw new Error('Not authenticated')
 
-    const id = crypto.randomUUID();
-    const entity: SessionEntity = { ...data, id };
+    const { data: result, error } = await supabase
+      .from('sessions')
+      .insert({
+        user_id: user.user.id,
+        ...data,
+      })
+      .select('id')
+      .single()
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['sessions'], 'readwrite');
-      const store = transaction.objectStore('sessions');
-      const request = store.add(entity);
-
-      request.onsuccess = () => resolve(id);
-      request.onerror = () => reject(request.error);
-    });
+    if (error) throw error
+    return result.id
   }
 
   async getSessionsByProgress(progressId: string): Promise<SessionEntity[]> {
-    if (!this.db) throw new Error('Database not initialized');
+    const { data, error } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('user_pattern_progress_id', progressId)
+      .order('start_time', { ascending: false })
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['sessions'], 'readonly');
-      const store = transaction.objectStore('sessions');
-      const index = store.index('user_pattern_progress_id');
-      const request = index.getAll(progressId);
-
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    if (error) throw error
+    return data || []
   }
 
   async deleteSession(sessionId: string): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
+    const { error } = await supabase
+      .from('sessions')
+      .delete()
+      .eq('id', sessionId)
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['sessions'], 'readwrite');
-      const store = transaction.objectStore('sessions');
-      const request = store.delete(sessionId);
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    if (error) throw error
   }
 
   // ==========================================
   // ATTEMPT OPERATIONS
   // ==========================================
 
-  async createAttempt(data: Omit<AttemptEntity, 'id'>): Promise<string> {
-    if (!this.db) throw new Error('Database not initialized');
+  async createAttempt(data: Omit<AttemptEntity, 'id' | 'user_id'>): Promise<string> {
+    const { data: user } = await supabase.auth.getUser()
+    if (!user.user) throw new Error('Not authenticated')
 
-    const id = crypto.randomUUID();
-    const entity: AttemptEntity = { ...data, id };
+    const { data: result, error } = await supabase
+      .from('attempts')
+      .insert({
+        user_id: user.user.id,
+        ...data,
+      })
+      .select('id')
+      .single()
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['attempts'], 'readwrite');
-      const store = transaction.objectStore('attempts');
-      const request = store.add(entity);
-
-      request.onsuccess = () => resolve(id);
-      request.onerror = () => reject(request.error);
-    });
+    if (error) throw error
+    return result.id
   }
 
   async getAttemptsBySession(sessionId: string): Promise<AttemptEntity[]> {
-    if (!this.db) throw new Error('Database not initialized');
+    const { data, error } = await supabase
+      .from('attempts')
+      .select('*')
+      .eq('session_id', sessionId)
+      .order('attempt_number')
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['attempts'], 'readonly');
-      const store = transaction.objectStore('attempts');
-      const index = store.index('session_id');
-      const request = index.getAll(sessionId);
-
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    if (error) throw error
+    return data || []
   }
 
   // ==========================================
   // PERSONAL BEST OPERATIONS
   // ==========================================
 
-  async createPersonalBest(data: Omit<PersonalBestEntity, 'id'>): Promise<string> {
-    if (!this.db) throw new Error('Database not initialized');
+  async createPersonalBest(data: Omit<PersonalBestEntity, 'id' | 'user_id'>): Promise<string> {
+    const { data: user } = await supabase.auth.getUser()
+    if (!user.user) throw new Error('Not authenticated')
 
-    const id = crypto.randomUUID();
-    const entity: PersonalBestEntity = { ...data, id };
+    const { data: result, error } = await supabase
+      .from('personal_bests')
+      .insert({
+        user_id: user.user.id,
+        ...data,
+      })
+      .select('id')
+      .single()
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['personal_bests'], 'readwrite');
-      const store = transaction.objectStore('personal_bests');
-      const request = store.add(entity);
-
-      request.onsuccess = () => resolve(id);
-      request.onerror = () => reject(request.error);
-    });
+    if (error) throw error
+    return result.id
   }
 
   async getPersonalBests(progressId: string): Promise<PersonalBestEntity[]> {
-    if (!this.db) throw new Error('Database not initialized');
+    const { data, error } = await supabase
+      .from('personal_bests')
+      .select('*')
+      .eq('user_pattern_progress_id', progressId)
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['personal_bests'], 'readonly');
-      const store = transaction.objectStore('personal_bests');
-      const index = store.index('user_pattern_progress_id');
-      const request = index.getAll(progressId);
-
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    if (error) throw error
+    return data || []
   }
 }
 
 // Singleton instance
-export const db = new SpeedBuilderDB();
+export const db = new SpeedBuilderDB()

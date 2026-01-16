@@ -5,8 +5,10 @@ import { db, UserPatternProgressEntity } from './database'
 import { Exercise } from './practice-routines'
 import { Analytics } from './Analytics'
 import { PatternDatabase, PatternItem } from './pattern-database'
+import { useAuth } from './lib/AuthContext'
 
 function App() {
+  const { user, signOut } = useAuth()
   const [selectedPattern, setSelectedPattern] = useState<PatternItem | null>(null)
   const [dbInitialized, setDbInitialized] = useState(false)
   const [metronome] = useState(() => new Metronome(60, [1, 2, 1, 3]))
@@ -551,13 +553,27 @@ function App() {
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-500 to-green-500 bg-clip-text text-transparent">
-            Speed Builder
-          </h1>
-          <p className="text-gray-400 text-lg">
-            Pattern Database & 30-Minute Practice Sessions
-          </p>
+        <div className="flex justify-between items-start mb-8">
+          <div className="flex-1" />
+          <div className="text-center flex-1">
+            <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-500 to-green-500 bg-clip-text text-transparent">
+              Speed Builder
+            </h1>
+            <p className="text-gray-400 text-lg">
+              Pattern Database & 30-Minute Practice Sessions
+            </p>
+          </div>
+          <div className="flex-1 flex justify-end">
+            <div className="text-right">
+              <div className="text-sm text-gray-400 mb-1">{user?.email}</div>
+              <button
+                onClick={signOut}
+                className="text-sm text-gray-500 hover:text-white transition-colors"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

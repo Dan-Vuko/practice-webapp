@@ -12,14 +12,19 @@ export function ProgressTracker() {
 
   const loadProgressData = async () => {
     const data = await db.getAllUserProgress()
-    setProgressData(data.sort((a, b) => new Date(b.last_practiced).getTime() - new Date(a.last_practiced).getTime()))
+    setProgressData(data.sort((a, b) => {
+      const aTime = a.last_practiced ? new Date(a.last_practiced).getTime() : 0
+      const bTime = b.last_practiced ? new Date(b.last_practiced).getTime() : 0
+      return bTime - aTime
+    }))
   }
 
   const getPatternName = (patternId: number) => {
     return PATTERNS.find(p => p.id === patternId)?.pattern || '?'
   }
 
-  const formatDate = (isoDate: string) => {
+  const formatDate = (isoDate: string | null) => {
+    if (!isoDate) return 'Never'
     return new Date(isoDate).toLocaleDateString()
   }
 
