@@ -1,0 +1,46 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "apps/speedbuilder/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/login",
+      "dest": "/public/login.html"
+    },
+    {
+      "src": "/",
+      "dest": "/public/portal.html"
+    },
+    {
+      "src": "/speedbuilder",
+      "dest": "/apps/speedbuilder/dist/index.html"
+    },
+    {
+      "src": "/speedbuilder/(.*)",
+      "dest": "/apps/speedbuilder/dist/$1"
+    },
+    {
+      "src": "/api/auth",
+      "dest": "/api/auth.ts"
+    },
+    {
+      "src": "/api/workouts/save",
+      "dest": "/api/workouts/save.ts"
+    },
+    {
+      "src": "/api/workouts/(.*)",
+      "dest": "/api/workouts/[id].ts"
+    },
+    {
+      "src": "/api/workouts",
+      "dest": "/api/workouts/index.ts"
+    }
+  ]
+}

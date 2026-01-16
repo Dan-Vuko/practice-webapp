@@ -1,0 +1,19 @@
+{
+  "name": "guitar-practice-portal",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "npm run build --workspace=speedbuilder",
+    "deploy": "vercel --prod"
+  },
+  "workspaces": [
+    "apps/speedbuilder"
+  ],
+  "dependencies": {
+    "@vercel/kv": "^1.0.0"
+  },
+  "devDependencies": {
+    "@vercel/node": "^3.0.0",
+    "vercel": "^33.0.0"
+  }
+}

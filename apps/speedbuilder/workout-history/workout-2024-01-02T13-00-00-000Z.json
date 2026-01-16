@@ -1,0 +1,23 @@
+{
+  "id": "mock-workout-5",
+  "pattern_id": "pattern-2",
+  "pattern_name": "1232",
+  "date": "2024-01-02T13:00:00.000Z",
+  "duration_minutes": 10,
+  "practice_minutes": 8,
+  "starting_bpm": 55,
+  "ending_bpm": 58,
+  "total_reps": 100,
+  "exercises": [
+    {
+      "type": "baseline",
+      "tempo": 55,
+      "time_spent": 240
+    },
+    {
+      "type": "recovery",
+      "tempo": 55,
+      "time_spent": 240
+    }
+  ]
+}
