@@ -91,15 +91,12 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
     } else {
       // Initialize with default structure
       const defaultItems: TreeItem[] = [
-        // Parent folder: Fingerpicking Patterns
+        // ========== FINGERPICKING PATTERNS ==========
         { id: 'folder-fingerpicking', name: 'Fingerpicking Patterns', parentId: 'root', isFolder: true },
-
-        // Child folders under Fingerpicking Patterns
         { id: 'folder-1', name: 'Starting with 1', parentId: 'folder-fingerpicking', isFolder: true },
         { id: 'folder-2', name: 'Starting with 2', parentId: 'folder-fingerpicking', isFolder: true },
         { id: 'folder-3', name: 'Starting with 3', parentId: 'folder-fingerpicking', isFolder: true },
 
-        // Starting with 1
         ...PATTERNS.slice(0, 6).map((p) => ({
           id: `pattern-${p.id}`,
           name: p.pattern,
@@ -115,8 +112,6 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
           total_reps: 0,
           last_practiced: new Date().toISOString()
         })),
-
-        // Starting with 2
         ...PATTERNS.slice(6, 12).map((p) => ({
           id: `pattern-${p.id}`,
           name: p.pattern,
@@ -132,8 +127,6 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
           total_reps: 0,
           last_practiced: new Date().toISOString()
         })),
-
-        // Starting with 3
         ...PATTERNS.slice(12, 18).map((p) => ({
           id: `pattern-${p.id}`,
           name: p.pattern,
@@ -148,14 +141,218 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
           total_practice_minutes: 0,
           total_reps: 0,
           last_practiced: new Date().toISOString()
-        }))
+        })),
+
+        // ========== STRING CROSSOVER TECHNIQUE ==========
+        { id: 'folder-crossover', name: 'String Crossover', parentId: 'root', isFolder: true },
+        {
+          id: 'pattern-cross3',
+          name: 'Cross3',
+          pattern: '1213',
+          sequence: [1, 2, 1, 3],
+          folderId: 'folder-crossover',
+          comment: 'Thumb-Index-Thumb across 3 strings. Pick any arpeggio shape, play T-I-T pattern crossing all 3 strings.',
+          isFolder: false as const,
+          current_bpm: 60,
+          target_bpm: 150,
+          total_sessions: 0,
+          total_practice_minutes: 0,
+          total_reps: 0,
+          last_practiced: new Date().toISOString()
+        },
+        {
+          id: 'pattern-cross5',
+          name: 'Cross5',
+          pattern: '1232',
+          sequence: [1, 2, 3, 2],
+          folderId: 'folder-crossover',
+          comment: '5-string arpeggio crossover. Play 2 strings, then cross to next pair. Continuous rolling motion across 5 strings.',
+          isFolder: false as const,
+          current_bpm: 60,
+          target_bpm: 150,
+          total_sessions: 0,
+          total_practice_minutes: 0,
+          total_reps: 0,
+          last_practiced: new Date().toISOString()
+        },
+
+        // ========== 1NPS ARPEGGIOS ==========
+        { id: 'folder-1nps', name: '1NPS Arpeggios', parentId: 'root', isFolder: true },
+        { id: 'folder-1nps-single', name: 'Single Position', parentId: 'folder-1nps', isFolder: true },
+        { id: 'folder-1nps-double', name: 'Two Positions', parentId: 'folder-1nps', isFolder: true },
+        { id: 'folder-1nps-full', name: 'Full Neck', parentId: 'folder-1nps', isFolder: true },
+
+        // Single positions
+        {
+          id: 'pattern-1nps-p1',
+          name: 'Pos1',
+          pattern: '1231',
+          sequence: [1, 2, 3, 1],
+          folderId: 'folder-1nps-single',
+          comment: 'Position 1: Aug→Maj→Min→Dim cycle. Compress: Aug→Maj(lower 5th)→Min(lower 3rd)→Dim(lower 5th to b5). Reverse back.',
+          isFolder: false as const,
+          current_bpm: 60,
+          target_bpm: 150,
+          total_sessions: 0,
+          total_practice_minutes: 0,
+          total_reps: 0,
+          last_practiced: new Date().toISOString()
+        },
+        {
+          id: 'pattern-1nps-p2',
+          name: 'Pos2',
+          pattern: '1231',
+          sequence: [1, 2, 3, 1],
+          folderId: 'folder-1nps-single',
+          comment: 'Position 2: Aug→Maj→Min→Dim cycle. Same compression sequence in 2nd position shape.',
+          isFolder: false as const,
+          current_bpm: 60,
+          target_bpm: 150,
+          total_sessions: 0,
+          total_practice_minutes: 0,
+          total_reps: 0,
+          last_practiced: new Date().toISOString()
+        },
+        {
+          id: 'pattern-1nps-p3',
+          name: 'Pos3',
+          pattern: '1231',
+          sequence: [1, 2, 3, 1],
+          folderId: 'folder-1nps-single',
+          comment: 'Position 3: Aug→Maj→Min→Dim cycle. Same compression sequence in 3rd position shape.',
+          isFolder: false as const,
+          current_bpm: 60,
+          target_bpm: 150,
+          total_sessions: 0,
+          total_practice_minutes: 0,
+          total_reps: 0,
+          last_practiced: new Date().toISOString()
+        },
+
+        // Two positions
+        {
+          id: 'pattern-1nps-p12',
+          name: 'Pos1+2',
+          pattern: '1231',
+          sequence: [1, 2, 3, 1],
+          folderId: 'folder-1nps-double',
+          comment: 'Positions 1→2: Connect position 1 and 2 shapes. Aug/Maj/Min/Dim through both positions with smooth transitions.',
+          isFolder: false as const,
+          current_bpm: 60,
+          target_bpm: 150,
+          total_sessions: 0,
+          total_practice_minutes: 0,
+          total_reps: 0,
+          last_practiced: new Date().toISOString()
+        },
+        {
+          id: 'pattern-1nps-p23',
+          name: 'Pos2+3',
+          pattern: '1231',
+          sequence: [1, 2, 3, 1],
+          folderId: 'folder-1nps-double',
+          comment: 'Positions 2→3: Connect position 2 and 3 shapes. Aug/Maj/Min/Dim through both positions with smooth transitions.',
+          isFolder: false as const,
+          current_bpm: 60,
+          target_bpm: 150,
+          total_sessions: 0,
+          total_practice_minutes: 0,
+          total_reps: 0,
+          last_practiced: new Date().toISOString()
+        },
+
+        // Full neck
+        {
+          id: 'pattern-1nps-full',
+          name: 'Pos1+2+3',
+          pattern: '1231',
+          sequence: [1, 2, 3, 1],
+          folderId: 'folder-1nps-full',
+          comment: 'Full neck: All 3 positions connected. Aug/Maj/Min/Dim through entire fretboard. Master position shifts.',
+          isFolder: false as const,
+          current_bpm: 60,
+          target_bpm: 150,
+          total_sessions: 0,
+          total_practice_minutes: 0,
+          total_reps: 0,
+          last_practiced: new Date().toISOString()
+        },
+        {
+          id: 'pattern-1nps-voice',
+          name: 'VoiceLead',
+          pattern: '1231',
+          sequence: [1, 2, 3, 1],
+          folderId: 'folder-1nps-full',
+          comment: 'Voice leading drill: Pick 2-3 random arpeggios (any quality), find smoothest voice leading between them. Minimize movement.',
+          isFolder: false as const,
+          current_bpm: 60,
+          target_bpm: 150,
+          total_sessions: 0,
+          total_practice_minutes: 0,
+          total_reps: 0,
+          last_practiced: new Date().toISOString()
+        },
+
+        // ========== 251 CADENCE ==========
+        { id: 'folder-251', name: '251 Cadence', parentId: 'root', isFolder: true },
+        {
+          id: 'pattern-251-p1',
+          name: '251→P1',
+          pattern: '1231',
+          sequence: [1, 2, 3, 1],
+          folderId: 'folder-251',
+          comment: 'Target: Position 1. Play ii-V-I triads resolving to position 1 shape. All inversions staying in position 1 area.',
+          isFolder: false as const,
+          current_bpm: 60,
+          target_bpm: 150,
+          total_sessions: 0,
+          total_practice_minutes: 0,
+          total_reps: 0,
+          last_practiced: new Date().toISOString()
+        },
+        {
+          id: 'pattern-251-p2',
+          name: '251→P2',
+          pattern: '1231',
+          sequence: [1, 2, 3, 1],
+          folderId: 'folder-251',
+          comment: 'Target: Position 1, through Position 2. Play ii-V-I triads using position 2 shapes, resolving to position 1.',
+          isFolder: false as const,
+          current_bpm: 60,
+          target_bpm: 150,
+          total_sessions: 0,
+          total_practice_minutes: 0,
+          total_reps: 0,
+          last_practiced: new Date().toISOString()
+        },
+        {
+          id: 'pattern-251-p3',
+          name: '251→P3',
+          pattern: '1231',
+          sequence: [1, 2, 3, 1],
+          folderId: 'folder-251',
+          comment: 'Target: Position 1, through Position 3. Play ii-V-I triads using position 3 shapes, resolving to position 1.',
+          isFolder: false as const,
+          current_bpm: 60,
+          target_bpm: 150,
+          total_sessions: 0,
+          total_practice_minutes: 0,
+          total_reps: 0,
+          last_practiced: new Date().toISOString()
+        }
       ]
 
       setItems(defaultItems)
       localStorage.setItem('patternDatabase', JSON.stringify(defaultItems))
 
       // Expand all folders by default
-      setExpandedFolders(new Set(['root', 'folder-fingerpicking', 'folder-1', 'folder-2', 'folder-3']))
+      setExpandedFolders(new Set([
+        'root',
+        'folder-fingerpicking', 'folder-1', 'folder-2', 'folder-3',
+        'folder-crossover',
+        'folder-1nps', 'folder-1nps-single', 'folder-1nps-double', 'folder-1nps-full',
+        'folder-251'
+      ]))
     }
   }
 
