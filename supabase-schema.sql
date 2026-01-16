@@ -67,5 +67,16 @@ CREATE TABLE IF NOT EXISTS personal_bests (
   session_id UUID REFERENCES sessions(id) ON DELETE SET NULL
 );
 
+-- FretMaster: Fretboard Patterns (per-user data)
+CREATE TABLE IF NOT EXISTS fret_patterns (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  pattern_name TEXT NOT NULL,
+  frets TEXT, -- JSON string of fret positions
+  description TEXT,
+  category TEXT DEFAULT 'scale' CHECK (category IN ('scale', 'chord', 'arpeggio', 'lick', 'exercise', 'other')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- RLS disabled for admin testing
 -- Patterns are managed in localStorage per-user, progress tracked in Supabase
