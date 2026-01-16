@@ -1,25 +1,26 @@
 import { useState } from 'react'
 import { useAuth } from '../lib/AuthContext'
 
+// Simple admin credentials for testing
+const ADMIN_USERNAME = 'admin'
+const ADMIN_PASSWORD = 'admin123'
+
 export function LoginPage() {
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [isSignUp, setIsSignUp] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const { signIn, signUp } = useAuth()
+  const { signInAsAdmin } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     setLoading(true)
 
-    const { error } = isSignUp
-      ? await signUp(email, password)
-      : await signIn(email, password)
-
-    if (error) {
-      setError(error.message)
+    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+      signInAsAdmin(username)
+    } else {
+      setError('Invalid username or password')
     }
     setLoading(false)
   }
@@ -33,23 +34,23 @@ export function LoginPage() {
               Metronome Speed Builder
             </h1>
             <p className="text-slate-400">
-              {isSignUp ? 'Create your account' : 'Sign in to continue'}
+              Sign in to continue
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
-                Email
+              <label htmlFor="username" className="block text-sm font-medium text-slate-300 mb-2">
+                Username
               </label>
               <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
                 className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                placeholder="you@example.com"
+                placeholder="admin"
               />
             </div>
 
@@ -63,7 +64,6 @@ export function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
                 className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 placeholder="••••••••"
               />
@@ -80,23 +80,9 @@ export function LoginPage() {
               disabled={loading}
               className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-800"
             >
-              {loading ? 'Loading...' : (isSignUp ? 'Create Account' : 'Sign In')}
+              {loading ? 'Loading...' : 'Sign In'}
             </button>
           </form>
-
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => {
-                setIsSignUp(!isSignUp)
-                setError(null)
-              }}
-              className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
-            >
-              {isSignUp
-                ? 'Already have an account? Sign in'
-                : "Don't have an account? Sign up"}
-            </button>
-          </div>
         </div>
       </div>
     </div>

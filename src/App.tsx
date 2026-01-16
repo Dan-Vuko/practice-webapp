@@ -565,7 +565,7 @@ function App() {
           </div>
           <div className="flex-1 flex justify-end">
             <div className="text-right">
-              <div className="text-sm text-gray-400 mb-1">{user?.email}</div>
+              <div className="text-sm text-gray-400 mb-1">{user?.username}</div>
               <button
                 onClick={signOut}
                 className="text-sm text-gray-500 hover:text-white transition-colors"

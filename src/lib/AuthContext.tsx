@@ -1,57 +1,50 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { User, Session } from '@supabase/supabase-js'
-import { supabase } from './supabase'
+
+interface AdminUser {
+  username: string
+}
 
 interface AuthContextType {
-  user: User | null
-  session: Session | null
+  user: AdminUser | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>
-  signOut: () => Promise<void>
+  signInAsAdmin: (username: string) => void
+  signOut: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+const STORAGE_KEY = 'speedbuilder_admin'
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
+  const [user, setUser] = useState<AdminUser | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
-
-    return () => subscription.unsubscribe()
+    // Check localStorage for existing session
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      try {
+        setUser(JSON.parse(stored))
+      } catch {
+        localStorage.removeItem(STORAGE_KEY)
+      }
+    }
+    setLoading(false)
   }, [])
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error: error as Error | null }
+  const signInAsAdmin = (username: string) => {
+    const adminUser = { username }
+    setUser(adminUser)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(adminUser))
   }
 
-  const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password })
-    return { error: error as Error | null }
-  }
-
-  const signOut = async () => {
-    await supabase.auth.signOut()
+  const signOut = () => {
+    setUser(null)
+    localStorage.removeItem(STORAGE_KEY)
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signInAsAdmin, signOut }}>
       {children}
     </AuthContext.Provider>
   )

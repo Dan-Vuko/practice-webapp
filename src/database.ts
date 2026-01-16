@@ -5,6 +5,9 @@
 
 import { supabase } from './lib/supabase'
 
+// Fixed admin user ID for testing (bypasses Supabase auth)
+const ADMIN_USER_ID = '00000000-0000-0000-0000-000000000001'
+
 // ==========================================
 // ENTITIES
 // ==========================================
@@ -104,13 +107,10 @@ class SpeedBuilderDB {
   // ==========================================
 
   async createUserPatternProgress(data: Omit<UserPatternProgressEntity, 'id' | 'created_at' | 'user_id'>): Promise<string> {
-    const { data: user } = await supabase.auth.getUser()
-    if (!user.user) throw new Error('Not authenticated')
-
     const { data: result, error } = await supabase
       .from('user_pattern_progress')
       .insert({
-        user_id: user.user.id,
+        user_id: ADMIN_USER_ID,
         pattern_id: data.pattern_id,
         string_set: data.string_set,
         current_bpm: data.current_bpm,
@@ -168,13 +168,10 @@ class SpeedBuilderDB {
   // ==========================================
 
   async createSession(data: Omit<SessionEntity, 'id' | 'user_id'>): Promise<string> {
-    const { data: user } = await supabase.auth.getUser()
-    if (!user.user) throw new Error('Not authenticated')
-
     const { data: result, error } = await supabase
       .from('sessions')
       .insert({
-        user_id: user.user.id,
+        user_id: ADMIN_USER_ID,
         ...data,
       })
       .select('id')
@@ -209,13 +206,10 @@ class SpeedBuilderDB {
   // ==========================================
 
   async createAttempt(data: Omit<AttemptEntity, 'id' | 'user_id'>): Promise<string> {
-    const { data: user } = await supabase.auth.getUser()
-    if (!user.user) throw new Error('Not authenticated')
-
     const { data: result, error } = await supabase
       .from('attempts')
       .insert({
-        user_id: user.user.id,
+        user_id: ADMIN_USER_ID,
         ...data,
       })
       .select('id')
@@ -241,13 +235,10 @@ class SpeedBuilderDB {
   // ==========================================
 
   async createPersonalBest(data: Omit<PersonalBestEntity, 'id' | 'user_id'>): Promise<string> {
-    const { data: user } = await supabase.auth.getUser()
-    if (!user.user) throw new Error('Not authenticated')
-
     const { data: result, error } = await supabase
       .from('personal_bests')
       .insert({
-        user_id: user.user.id,
+        user_id: ADMIN_USER_ID,
         ...data,
       })
       .select('id')
