@@ -8,4 +8,5 @@ dist/
 .vercel
 
 # Environment files
+.env
 .env*.local
