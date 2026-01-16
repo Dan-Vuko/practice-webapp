@@ -413,107 +413,96 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                   {patterns.map(pattern => (
                     <div
                       key={pattern.id}
-                      style={{ paddingLeft: `${(depth + 1) * 20}px` }}
-                      className={`flex items-center gap-2 py-1 px-2 cursor-pointer transition-colors group text-[11px] ${
+                      style={{ paddingLeft: `${(depth + 1) * 16}px` }}
+                      className={`flex items-center gap-1 py-0.5 px-1 cursor-pointer transition-colors group text-[9px] ${
                         selectedPatternId === pattern.id
-                          ? 'bg-purple-900/40 border-l-4 border-purple-500'
+                          ? 'bg-purple-900/40 border-l-2 border-purple-500'
                           : 'hover:bg-gray-700/30'
                       }`}
                       onClick={() => onSelectPattern(pattern)}
                     >
-                      <span className="text-purple-400 text-xs">🎵</span>
-                      <span className="font-mono font-semibold text-blue-400 w-14 text-xs">{pattern.name}</span>
-                      <div className="flex-1 flex items-center gap-2 text-gray-400">
-                        <span className="w-16">
-                          Cur:{' '}
-                          {editingBpmId === pattern.id && editingBpmType === 'current' ? (
-                            <input
-                              type="number"
-                              value={editBpmValue}
-                              onChange={(e) => setEditBpmValue(parseInt(e.target.value) || 0)}
-                              onBlur={handleBpmSave}
-                              onKeyDown={handleBpmKeyPress}
-                              className="w-10 bg-blue-900 text-blue-400 font-semibold border border-blue-500 rounded px-1 text-xs"
-                              autoFocus
-                            />
-                          ) : (
-                            <span
-                              className="text-blue-400 font-semibold cursor-pointer hover:underline"
-                              onDoubleClick={() => handleBpmDoubleClick(pattern, 'current')}
-                            >
-                              {pattern.current_bpm}
-                            </span>
-                          )}
-                        </span>
-                        <span className="w-16">
-                          Tgt:{' '}
-                          {editingBpmId === pattern.id && editingBpmType === 'target' ? (
-                            <input
-                              type="number"
-                              value={editBpmValue}
-                              onChange={(e) => setEditBpmValue(parseInt(e.target.value) || 0)}
-                              onBlur={handleBpmSave}
-                              onKeyDown={handleBpmKeyPress}
-                              className="w-10 bg-green-900 text-green-400 font-semibold border border-green-500 rounded px-1 text-xs"
-                              autoFocus
-                            />
-                          ) : (
-                            <span
-                              className="text-green-400 font-semibold cursor-pointer hover:underline"
-                              onDoubleClick={() => handleBpmDoubleClick(pattern, 'target')}
-                            >
-                              {pattern.target_bpm}
-                            </span>
-                          )}
-                        </span>
-                        <span className="w-14">{sessionCounts[pattern.id] || 0} sess</span>
-                        <span className="w-10">{pattern.total_practice_minutes}m</span>
-                        <span className="w-14" title="Total repetitions">{pattern.total_reps} reps</span>
-                        <span className="w-10" title="Average reps per session">{pattern.total_sessions > 0 ? Math.round(pattern.total_reps / pattern.total_sessions) : 0}/s</span>
-                        <span className="w-16">{new Date(pattern.last_practiced).toLocaleDateString()}</span>
+                      <span className="text-purple-400 text-[9px]">🎵</span>
+                      <span className="font-mono font-semibold text-blue-400 w-16 truncate text-[10px]">{pattern.name}</span>
+                      <div className="flex-1 flex items-center gap-1 text-gray-400">
+                        {editingBpmId === pattern.id && editingBpmType === 'current' ? (
+                          <input
+                            type="number"
+                            value={editBpmValue}
+                            onChange={(e) => setEditBpmValue(parseInt(e.target.value) || 0)}
+                            onBlur={handleBpmSave}
+                            onKeyDown={handleBpmKeyPress}
+                            className="w-8 bg-blue-900 text-blue-400 font-semibold border border-blue-500 rounded px-0.5 text-[9px]"
+                            autoFocus
+                          />
+                        ) : (
+                          <span
+                            className="text-blue-400 font-semibold cursor-pointer hover:underline w-6"
+                            onDoubleClick={() => handleBpmDoubleClick(pattern, 'current')}
+                            title="Current BPM"
+                          >
+                            {pattern.current_bpm}
+                          </span>
+                        )}
+                        <span className="text-gray-600">/</span>
+                        {editingBpmId === pattern.id && editingBpmType === 'target' ? (
+                          <input
+                            type="number"
+                            value={editBpmValue}
+                            onChange={(e) => setEditBpmValue(parseInt(e.target.value) || 0)}
+                            onBlur={handleBpmSave}
+                            onKeyDown={handleBpmKeyPress}
+                            className="w-8 bg-green-900 text-green-400 font-semibold border border-green-500 rounded px-0.5 text-[9px]"
+                            autoFocus
+                          />
+                        ) : (
+                          <span
+                            className="text-green-400 font-semibold cursor-pointer hover:underline w-6"
+                            onDoubleClick={() => handleBpmDoubleClick(pattern, 'target')}
+                            title="Target BPM"
+                          >
+                            {pattern.target_bpm}
+                          </span>
+                        )}
+                        <span className="text-gray-500 w-8" title="Sessions">{sessionCounts[pattern.id] || 0}s</span>
+                        <span className="text-gray-500 w-8" title="Practice time">{pattern.total_practice_minutes}m</span>
+                        <span className="text-gray-500 w-10" title="Total reps">{pattern.total_reps}r</span>
                       </div>
                       {pattern.comment && (
                         <div className="relative group/comment">
-                          <span className="text-gray-500 text-xs px-2 py-1 bg-gray-700 rounded cursor-help">
-                            💬
-                          </span>
-                          <div className="absolute bottom-full left-0 mb-2 hidden group-hover/comment:block bg-gray-900 border border-gray-600 rounded px-3 py-2 text-xs text-gray-300 w-48 z-10">
+                          <span className="text-gray-500 text-[8px] px-1 bg-gray-700 rounded cursor-help">💬</span>
+                          <div className="absolute bottom-full left-0 mb-1 hidden group-hover/comment:block bg-gray-900 border border-gray-600 rounded px-2 py-1 text-[9px] text-gray-300 w-40 z-10">
                             {pattern.comment}
                           </div>
                         </div>
                       )}
                       {onShowAnalytics && (
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onShowAnalytics(pattern)
-                          }}
-                          className="text-xs px-3 py-1 bg-blue-900/30 hover:bg-blue-900/50 border border-blue-700 text-blue-400 rounded transition-colors font-semibold"
-                        >
-                          📊
-                        </button>
+                          onClick={(e) => { e.stopPropagation(); onShowAnalytics(pattern) }}
+                          className="text-[8px] px-1 py-0.5 bg-blue-900/50 hover:bg-blue-900 text-blue-400 rounded"
+                          title="Analytics"
+                        >📊</button>
                       )}
-                      <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                      <div className="opacity-0 group-hover:opacity-100 flex gap-0.5">
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
                             setContextMenuItem(pattern)
                             setShowMoveModal(true)
                           }}
-                          className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-white"
-                          title="Move pattern"
+                          className="text-[8px] px-1 py-0.5 bg-blue-600 hover:bg-blue-700 rounded text-white"
+                          title="Move"
                         >
-                          ↔️
+                          ↔
                         </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
                             handleDeleteItem(pattern)
                           }}
-                          className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 rounded text-white"
-                          title="Delete pattern"
+                          className="text-[8px] px-1 py-0.5 bg-red-600 hover:bg-red-700 rounded text-white"
+                          title="Delete"
                         >
-                          🗑️
+                          ✕
                         </button>
                       </div>
                     </div>
