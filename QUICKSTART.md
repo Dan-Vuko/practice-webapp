@@ -2,7 +2,7 @@
 
 ## Production URL
 ```
-https://practice-webapp.vercel.app
+https://practice-webapp-speedbuilder.vercel.app/
 ```
 (Update this with your actual Vercel URL)
 
