@@ -67,8 +67,6 @@ const getDefaultItems = (): TreeItem[] => [
   // Full neck
   createPattern('pattern-1nps-full', 'Pos1+2+3', '1231', [1, 2, 3, 1], 'folder-1nps-full',
     'Full neck: All 3 positions connected. Aug/Maj/Min/Dim through entire fretboard. Master position shifts.'),
-  createPattern('pattern-1nps-voice', 'VoiceLead', '1231', [1, 2, 3, 1], 'folder-1nps-full',
-    'Voice leading drill: Pick 2-3 random arpeggios (any quality), find smoothest voice leading between them. Minimize movement.'),
 
   // ========== 251 CADENCE ==========
   { id: 'folder-251', name: '251 Cadence', parentId: 'root', isFolder: true },
@@ -416,18 +414,18 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                     <div
                       key={pattern.id}
                       style={{ paddingLeft: `${(depth + 1) * 20}px` }}
-                      className={`flex items-center gap-3 py-2 px-3 cursor-pointer transition-colors group ${
+                      className={`flex items-center gap-2 py-1 px-2 cursor-pointer transition-colors group text-[11px] ${
                         selectedPatternId === pattern.id
                           ? 'bg-purple-900/40 border-l-4 border-purple-500'
                           : 'hover:bg-gray-700/30'
                       }`}
                       onClick={() => onSelectPattern(pattern)}
                     >
-                      <span className="text-purple-400">🎵</span>
-                      <span className="font-mono font-bold text-blue-400 w-16">{pattern.name}</span>
-                      <div className="flex-1 flex items-center gap-3 text-xs text-gray-400">
-                        <span className="w-20">
-                          Current:{' '}
+                      <span className="text-purple-400 text-xs">🎵</span>
+                      <span className="font-mono font-semibold text-blue-400 w-14 text-xs">{pattern.name}</span>
+                      <div className="flex-1 flex items-center gap-2 text-gray-400">
+                        <span className="w-16">
+                          Cur:{' '}
                           {editingBpmId === pattern.id && editingBpmType === 'current' ? (
                             <input
                               type="number"
@@ -435,7 +433,7 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                               onChange={(e) => setEditBpmValue(parseInt(e.target.value) || 0)}
                               onBlur={handleBpmSave}
                               onKeyDown={handleBpmKeyPress}
-                              className="w-12 bg-blue-900 text-blue-400 font-semibold border border-blue-500 rounded px-1"
+                              className="w-10 bg-blue-900 text-blue-400 font-semibold border border-blue-500 rounded px-1 text-xs"
                               autoFocus
                             />
                           ) : (
@@ -447,8 +445,8 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                             </span>
                           )}
                         </span>
-                        <span className="w-20">
-                          Target:{' '}
+                        <span className="w-16">
+                          Tgt:{' '}
                           {editingBpmId === pattern.id && editingBpmType === 'target' ? (
                             <input
                               type="number"
@@ -456,7 +454,7 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                               onChange={(e) => setEditBpmValue(parseInt(e.target.value) || 0)}
                               onBlur={handleBpmSave}
                               onKeyDown={handleBpmKeyPress}
-                              className="w-12 bg-green-900 text-green-400 font-semibold border border-green-500 rounded px-1"
+                              className="w-10 bg-green-900 text-green-400 font-semibold border border-green-500 rounded px-1 text-xs"
                               autoFocus
                             />
                           ) : (
@@ -468,11 +466,11 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                             </span>
                           )}
                         </span>
-                        <span className="w-20">{sessionCounts[pattern.id] || 0} sessions</span>
-                        <span className="w-14">{pattern.total_practice_minutes}m</span>
-                        <span className="w-20" title="Total repetitions">{pattern.total_reps} reps</span>
-                        <span className="w-16" title="Average reps per session">{pattern.total_sessions > 0 ? Math.round(pattern.total_reps / pattern.total_sessions) : 0}/s</span>
-                        <span className="w-24 text-xs">{new Date(pattern.last_practiced).toLocaleDateString()}</span>
+                        <span className="w-14">{sessionCounts[pattern.id] || 0} sess</span>
+                        <span className="w-10">{pattern.total_practice_minutes}m</span>
+                        <span className="w-14" title="Total repetitions">{pattern.total_reps} reps</span>
+                        <span className="w-10" title="Average reps per session">{pattern.total_sessions > 0 ? Math.round(pattern.total_reps / pattern.total_sessions) : 0}/s</span>
+                        <span className="w-16">{new Date(pattern.last_practiced).toLocaleDateString()}</span>
                       </div>
                       {pattern.comment && (
                         <div className="relative group/comment">
