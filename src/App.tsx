@@ -4,6 +4,7 @@ import { Metronome, Subdivision, Dynamic } from './metronome'
 import { db, UserPatternProgressEntity } from './database'
 import { Exercise } from './practice-routines'
 import { Analytics } from './Analytics'
+import { MetaAnalytics } from './MetaAnalytics'
 import { PatternDatabase, PatternItem } from './pattern-database'
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
   const [beatDynamics, setBeatDynamics] = useState<Dynamic[]>(['loud', 'normal', 'normal', 'normal'])
   const [volume, setVolume] = useState<number>(1.4)
   const [showAnalytics, setShowAnalytics] = useState<UserPatternProgressEntity | null>(null)
+  const [showMetaAnalytics, setShowMetaAnalytics] = useState(false)
   const [workoutStartTime, setWorkoutStartTime] = useState<Date | null>(null)
   const [workoutStartBpm, setWorkoutStartBpm] = useState<number>(0)
   const [sessionReps, setSessionReps] = useState<number>(0)
@@ -554,9 +556,17 @@ function App() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl sm:text-5xl font-bold mb-4 bg-gradient-to-r from-purple-500 to-green-500 bg-clip-text text-transparent">
-            Speed Builder
-          </h1>
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-purple-500 to-green-500 bg-clip-text text-transparent">
+              Speed Builder
+            </h1>
+            <button
+              onClick={() => setShowMetaAnalytics(true)}
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold rounded-lg transition-all flex items-center gap-2"
+            >
+              <span>Analytics</span>
+            </button>
+          </div>
           <p className="text-gray-400 text-lg">
             Pattern Database & 30-Minute Practice Sessions
           </p>
@@ -826,6 +836,11 @@ function App() {
             progress={showAnalytics}
             onClose={() => setShowAnalytics(null)}
           />
+        )}
+
+        {/* Meta Analytics Modal */}
+        {showMetaAnalytics && (
+          <MetaAnalytics onClose={() => setShowMetaAnalytics(false)} />
         )}
 
         {/* Add Pattern Modal */}
