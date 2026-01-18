@@ -82,7 +82,7 @@ export function TopNav({ currentApp, onSwitchApp }: TopNavProps) {
                               ? 'ring-2 ring-accent'
                               : 'hover:bg-theme-hover'
                           }`}
-                          style={themeId === t.id ? { backgroundColor: t.colors.primary.darkest + '40' } : {}}
+                          style={themeId === t.id ? { backgroundColor: t.colors.primary.dark + '40' } : {}}
                         >
                           {/* Color preview dots */}
                           <div className="flex gap-1">
