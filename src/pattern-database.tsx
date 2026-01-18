@@ -374,13 +374,13 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
               {/* Folder */}
               <div
                 style={{ paddingLeft: `${depth * 20}px` }}
-                className="flex items-center gap-2 py-2 px-3 hover:bg-gray-700/50 cursor-pointer group"
+                className="flex items-center gap-2 py-2 px-3 hover:bg-theme-hover/50 cursor-pointer group"
                 onClick={() => toggleFolder(folder.id)}
               >
-                <span className="text-gray-400">
+                <span className="text-content-secondary">
                   {isExpanded ? '📂' : '📁'}
                 </span>
-                <span className="text-white font-semibold flex-1">{folder.name}</span>
+                <span className="text-content-primary font-semibold flex-1">{folder.name}</span>
                 <div className="opacity-0 group-hover:opacity-100 flex gap-1">
                   <button
                     onClick={(e) => {
@@ -389,7 +389,7 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                       setAddModalType('pattern')
                       setShowAddModal(true)
                     }}
-                    className="text-xs px-2 py-1 bg-purple-600 hover:bg-purple-700 rounded text-white"
+                    className="text-xs px-2 py-1 bg-accent-hover hover:bg-accent-dark rounded text-content-primary"
                   >
                     + Add
                   </button>
@@ -398,7 +398,7 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                       e.stopPropagation()
                       handleDeleteItem(folder)
                     }}
-                    className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 rounded text-white"
+                    className="text-xs px-2 py-1 bg-status-error-hover hover:bg-status-error rounded text-content-primary"
                     title="Delete folder"
                   >
                     🗑️
@@ -416,14 +416,14 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                       style={{ paddingLeft: `${(depth + 1) * 16}px` }}
                       className={`flex items-center gap-1 py-0.5 px-1 cursor-pointer transition-colors group text-[9px] ${
                         selectedPatternId === pattern.id
-                          ? 'bg-purple-900/40 border-l-2 border-purple-500'
-                          : 'hover:bg-gray-700/30'
+                          ? 'bg-accent-bg border-l-2 border-accent'
+                          : 'hover:bg-theme-elevated/30'
                       }`}
                       onClick={() => onSelectPattern(pattern)}
                     >
-                      <span className="text-purple-400 text-[9px]">🎵</span>
-                      <span className="font-mono font-semibold text-blue-400 w-16 truncate text-[10px]">{pattern.name}</span>
-                      <div className="flex-1 flex items-center gap-1 text-gray-400">
+                      <span className="text-accent-muted text-[9px]">🎵</span>
+                      <span className="font-mono font-semibold text-accent3-muted w-16 truncate text-[10px]">{pattern.name}</span>
+                      <div className="flex-1 flex items-center gap-1 text-content-secondary">
                         {editingBpmId === pattern.id && editingBpmType === 'current' ? (
                           <input
                             type="number"
@@ -431,19 +431,19 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                             onChange={(e) => setEditBpmValue(parseInt(e.target.value) || 0)}
                             onBlur={handleBpmSave}
                             onKeyDown={handleBpmKeyPress}
-                            className="w-8 bg-blue-900 text-blue-400 font-semibold border border-blue-500 rounded px-0.5 text-[9px]"
+                            className="w-8 bg-accent3-dark text-accent3-muted font-semibold border border-accent3 rounded px-0.5 text-[9px]"
                             autoFocus
                           />
                         ) : (
                           <span
-                            className="text-blue-400 font-semibold cursor-pointer hover:underline w-6"
+                            className="text-accent3-muted font-semibold cursor-pointer hover:underline w-6"
                             onDoubleClick={() => handleBpmDoubleClick(pattern, 'current')}
                             title="Current BPM"
                           >
                             {pattern.current_bpm}
                           </span>
                         )}
-                        <span className="text-gray-600">/</span>
+                        <span className="text-content-tertiary">/</span>
                         {editingBpmId === pattern.id && editingBpmType === 'target' ? (
                           <input
                             type="number"
@@ -451,26 +451,26 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                             onChange={(e) => setEditBpmValue(parseInt(e.target.value) || 0)}
                             onBlur={handleBpmSave}
                             onKeyDown={handleBpmKeyPress}
-                            className="w-8 bg-green-900 text-green-400 font-semibold border border-green-500 rounded px-0.5 text-[9px]"
+                            className="w-8 bg-accent2-bg text-accent2-muted font-semibold border border-accent2 rounded px-0.5 text-[9px]"
                             autoFocus
                           />
                         ) : (
                           <span
-                            className="text-green-400 font-semibold cursor-pointer hover:underline w-6"
+                            className="text-accent2-muted font-semibold cursor-pointer hover:underline w-6"
                             onDoubleClick={() => handleBpmDoubleClick(pattern, 'target')}
                             title="Target BPM"
                           >
                             {pattern.target_bpm}
                           </span>
                         )}
-                        <span className="text-gray-500" title="Sessions">{sessionCounts[pattern.id] || 0} sessions</span>
-                        <span className="text-gray-500" title="Practice time">{pattern.total_practice_minutes} minutes</span>
-                        <span className="text-gray-500" title="Total reps">{pattern.total_reps} reps</span>
+                        <span className="text-content-tertiary" title="Sessions">{sessionCounts[pattern.id] || 0} sessions</span>
+                        <span className="text-content-tertiary" title="Practice time">{pattern.total_practice_minutes} minutes</span>
+                        <span className="text-content-tertiary" title="Total reps">{pattern.total_reps} reps</span>
                       </div>
                       {pattern.comment && (
                         <div className="relative group/comment">
-                          <span className="text-gray-500 text-[8px] px-1 bg-gray-700 rounded cursor-help">💬</span>
-                          <div className="absolute bottom-full left-0 mb-1 hidden group-hover/comment:block bg-gray-900 border border-gray-600 rounded px-2 py-1 text-[9px] text-gray-300 w-40 z-10">
+                          <span className="text-content-tertiary text-[8px] px-1 bg-theme-elevated rounded cursor-help">💬</span>
+                          <div className="absolute bottom-full left-0 mb-1 hidden group-hover/comment:block bg-theme-base border border-border-hover rounded px-2 py-1 text-[9px] text-content-muted w-40 z-10">
                             {pattern.comment}
                           </div>
                         </div>
@@ -478,7 +478,7 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                       {onShowAnalytics && (
                         <button
                           onClick={(e) => { e.stopPropagation(); onShowAnalytics(pattern) }}
-                          className="text-[8px] px-1 py-0.5 bg-blue-900/50 hover:bg-blue-900 text-blue-400 rounded"
+                          className="text-[8px] px-1 py-0.5 bg-accent3-bg hover:bg-accent3-bg-strong text-accent3-muted rounded"
                           title="Analytics"
                         >📊</button>
                       )}
@@ -489,7 +489,7 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                             setContextMenuItem(pattern)
                             setShowMoveModal(true)
                           }}
-                          className="text-[8px] px-1 py-0.5 bg-blue-600 hover:bg-blue-700 rounded text-white"
+                          className="text-[8px] px-1 py-0.5 bg-accent3-hover hover:bg-accent3-dark rounded text-content-primary"
                           title="Move"
                         >
                           ↔
@@ -499,7 +499,7 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                             e.stopPropagation()
                             handleDeleteItem(pattern)
                           }}
-                          className="text-[8px] px-1 py-0.5 bg-red-600 hover:bg-red-700 rounded text-white"
+                          className="text-[8px] px-1 py-0.5 bg-status-error-hover hover:bg-status-error rounded text-content-primary"
                           title="Delete"
                         >
                           ✕
@@ -520,10 +520,10 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
   }
 
   return (
-    <div className="bg-gray-800 rounded-lg border border-gray-700 h-full flex flex-col">
+    <div className="bg-theme-surface rounded-lg border border-border">
       {/* Header */}
-      <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-        <h2 className="text-xl font-bold text-white">Patterns</h2>
+      <div className="p-4 border-b border-border flex items-center justify-between">
+        <h2 className="text-xl font-bold text-content-primary">Patterns</h2>
         <div className="flex gap-2">
           <button
             onClick={() => {
@@ -531,7 +531,7 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
               setAddModalType('folder')
               setShowAddModal(true)
             }}
-            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-semibold"
+            className="px-3 py-1 bg-accent3-hover hover:bg-accent3-dark text-content-primary rounded text-sm font-semibold"
           >
             + Folder
           </button>
@@ -541,7 +541,7 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
               setAddModalType('pattern')
               setShowAddModal(true)
             }}
-            className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm font-semibold"
+            className="px-3 py-1 bg-accent-hover hover:bg-accent-dark text-content-primary rounded text-sm font-semibold"
           >
             + Pattern
           </button>
@@ -549,27 +549,27 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
       </div>
 
       {/* Tree */}
-      <div className="flex-1 overflow-y-auto">
+      <div>
         {renderTree('root', 0)}
       </div>
 
       {/* Add Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowAddModal(false)}>
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-2xl font-bold text-white mb-4">
+          <div className="bg-theme-surface rounded-lg p-6 border border-border max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-2xl font-bold text-content-primary mb-4">
               {addModalType === 'folder' ? 'Add Folder' : 'Add Pattern'}
             </h3>
 
             {addModalType === 'folder' ? (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-gray-400 text-sm mb-2">Folder Name</label>
+                  <label className="block text-content-secondary text-sm mb-2">Folder Name</label>
                   <input
                     type="text"
                     value={newFolderName}
                     onChange={(e) => setNewFolderName(e.target.value)}
-                    className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg"
+                    className="w-full bg-theme-elevated text-content-primary px-4 py-2 rounded-lg"
                     placeholder="e.g., Starting with 1"
                   />
                 </div>
@@ -577,55 +577,55 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
             ) : (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-gray-400 text-sm mb-2">Pattern Name</label>
+                  <label className="block text-content-secondary text-sm mb-2">Pattern Name</label>
                   <input
                     type="text"
                     value={newPatternName}
                     onChange={(e) => setNewPatternName(e.target.value)}
-                    className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg font-mono"
+                    className="w-full bg-theme-elevated text-content-primary px-4 py-2 rounded-lg font-mono"
                     placeholder="e.g., 1213"
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 text-sm mb-2">Pattern Sequence (4 digits: 1, 2, 3)</label>
+                  <label className="block text-content-secondary text-sm mb-2">Pattern Sequence (4 digits: 1, 2, 3)</label>
                   <input
                     type="text"
                     value={newPatternSequence}
                     onChange={(e) => setNewPatternSequence(e.target.value)}
-                    className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg font-mono text-lg"
+                    className="w-full bg-theme-elevated text-content-primary px-4 py-2 rounded-lg font-mono text-lg"
                     placeholder="e.g., 1213"
                     maxLength={4}
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 text-sm mb-2">Comment (optional)</label>
+                  <label className="block text-content-secondary text-sm mb-2">Comment (optional)</label>
                   <textarea
                     value={newPatternComment}
                     onChange={(e) => setNewPatternComment(e.target.value)}
-                    className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg"
+                    className="w-full bg-theme-elevated text-content-primary px-4 py-2 rounded-lg"
                     placeholder="Notes about this pattern..."
                     rows={2}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-gray-400 text-sm mb-2">Starting BPM</label>
+                    <label className="block text-content-secondary text-sm mb-2">Starting BPM</label>
                     <input
                       type="number"
                       value={newStartingBpm}
                       onChange={(e) => setNewStartingBpm(parseInt(e.target.value) || 60)}
-                      className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg"
+                      className="w-full bg-theme-elevated text-content-primary px-4 py-2 rounded-lg"
                       min="40"
                       max="200"
                     />
                   </div>
                   <div>
-                    <label className="block text-gray-400 text-sm mb-2">Target BPM</label>
+                    <label className="block text-content-secondary text-sm mb-2">Target BPM</label>
                     <input
                       type="number"
                       value={newTargetBpm}
                       onChange={(e) => setNewTargetBpm(parseInt(e.target.value) || 150)}
-                      className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg"
+                      className="w-full bg-theme-elevated text-content-primary px-4 py-2 rounded-lg"
                       min="60"
                       max="300"
                     />
@@ -637,13 +637,13 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
             <div className="flex gap-3 mt-6">
               <button
                 onClick={addModalType === 'folder' ? handleAddFolder : handleAddPattern}
-                className="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 rounded-lg transition-colors"
+                className="flex-1 bg-accent hover:bg-accent-hover text-content-primary font-bold py-3 rounded-lg transition-colors"
               >
                 Add
               </button>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg transition-colors"
+                className="flex-1 bg-theme-elevated hover:bg-theme-hover text-content-primary font-bold py-3 rounded-lg transition-colors"
               >
                 Cancel
               </button>
@@ -655,8 +655,8 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
       {/* Move Modal */}
       {showMoveModal && contextMenuItem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowMoveModal(false)}>
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-2xl font-bold text-white mb-4">
+          <div className="bg-theme-surface rounded-lg p-6 border border-border max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-2xl font-bold text-content-primary mb-4">
               Move "{contextMenuItem.name}"
             </h3>
 
@@ -664,7 +664,7 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
               {/* Root option */}
               <button
                 onClick={() => handleMoveItem(contextMenuItem, 'root')}
-                className="w-full text-left px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded text-white"
+                className="w-full text-left px-4 py-3 bg-theme-elevated hover:bg-theme-hover rounded text-content-primary"
               >
                 📁 Root
               </button>
@@ -678,7 +678,7 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                   <button
                     key={folder.id}
                     onClick={() => handleMoveItem(contextMenuItem, folder.id)}
-                    className="w-full text-left px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded text-white"
+                    className="w-full text-left px-4 py-3 bg-theme-elevated hover:bg-theme-hover rounded text-content-primary"
                   >
                     📁 {folder.name}
                   </button>
@@ -688,7 +688,7 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
 
             <button
               onClick={() => setShowMoveModal(false)}
-              className="w-full mt-4 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg transition-colors"
+              className="w-full mt-4 bg-theme-elevated hover:bg-theme-hover text-content-primary font-bold py-3 rounded-lg transition-colors"
             >
               Cancel
             </button>

@@ -252,7 +252,7 @@ function App() {
     metronome.setTempo(pattern.current_bpm)
 
     // Load percentage-based workout
-    const exercises = getPercentageWorkout(pattern.current_bpm)
+    const exercises = getPercentageWorkout(pattern.current_bpm, pattern.target_bpm)
     setSessionExercises(exercises)
     setCurrentExerciseIndex(0)
 
@@ -361,7 +361,10 @@ function App() {
     setClickCount(0)
   }
 
-  const getPercentageWorkout = (currentBpm: number): Exercise[] => {
+  const getPercentageWorkout = (currentBpm: number, targetBpm: number): Exercise[] => {
+    // Micro-burst tempo is halfway between current and target
+    const microBurstTempo = Math.round((currentBpm + targetBpm) / 2)
+
     return [
       {
         type: 'warm-up-60',
@@ -380,8 +383,8 @@ function App() {
       {
         type: 'micro-burst',
         durationMinutes: 2,
-        startingTempo: Math.round(currentBpm * 1.5),
-        description: `Micro-bursts: Play once at +50%, then rest (${Math.round(currentBpm * 1.5)} BPM)`,
+        startingTempo: microBurstTempo,
+        description: `Micro-bursts: Halfway to target, then rest (${microBurstTempo} BPM)`,
         protocol: 'micro-burst'
       },
       {
@@ -508,9 +511,9 @@ function App() {
 
   const getDynamicColor = (dynamic: Dynamic) => {
     switch (dynamic) {
-      case 'loud': return 'bg-red-500'
-      case 'normal': return 'bg-blue-400'
-      case 'soft': return 'bg-gray-500'
+      case 'loud': return 'bg-beat-loud'
+      case 'normal': return 'bg-beat-normal'
+      case 'soft': return 'bg-beat-soft'
     }
   }
 
@@ -546,7 +549,7 @@ function App() {
   if (!dbInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-white text-xl">Initializing database...</div>
+        <div className="text-content-primary text-xl">Initializing database...</div>
       </div>
     )
   }
@@ -557,17 +560,17 @@ function App() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-4 mb-4">
-            <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-purple-500 to-green-500 bg-clip-text text-transparent">
+            <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-title">
               Speed Builder
             </h1>
             <button
               onClick={() => setShowMetaAnalytics(true)}
-              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold rounded-lg transition-all flex items-center gap-2"
+              className="px-4 py-2 bg-gradient-button hover:bg-gradient-button-hover text-content-primary font-semibold rounded-lg transition-all flex items-center gap-2"
             >
               <span>Analytics</span>
             </button>
           </div>
-          <p className="text-gray-400 text-lg">
+          <p className="text-content-secondary text-lg">
             Pattern Database & 30-Minute Practice Sessions
           </p>
         </div>
@@ -585,12 +588,12 @@ function App() {
           {/* RIGHT: Metronome & Practice Session */}
           <div className="space-y-6">
             {/* Metronome */}
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <h3 className="text-xl font-bold text-white mb-4">Metronome</h3>
+            <div className="bg-theme-surface rounded-lg p-6 border border-border">
+              <h3 className="text-xl font-bold text-content-primary mb-4">Metronome</h3>
               {selectedPattern ? (
                 <>
                   <div className="text-center mb-6">
-                    <div className="text-sm text-gray-400 mb-2">
+                    <div className="text-sm text-content-secondary mb-2">
                       Pattern: {selectedPattern.name}
                     </div>
 
@@ -601,42 +604,42 @@ function App() {
                           key={idx}
                           onClick={() => cycleBeatDynamic(idx)}
                           className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
-                            currentBeat === idx ? 'ring-4 ring-purple-500 scale-110' : ''
+                            currentBeat === idx ? 'ring-4 ring-accent scale-110' : ''
                           } hover:opacity-80`}
                         >
                           <div className={`rounded-full ${getDynamicColor(dynamic)} ${getDynamicSize(dynamic)} transition-all`} />
                         </button>
                       ))}
                     </div>
-                    <div className="text-xs text-gray-500 mb-4">
+                    <div className="text-xs text-content-tertiary mb-4">
                       Click dots: Red (Loud) → Blue (Normal) → Gray (Soft)
                     </div>
                     <div className="flex items-center justify-center gap-3 mb-4">
                       <button
                         onClick={() => metronome.setTempo(Math.max(20, metronome.getTempo() - 5))}
-                        className="w-10 h-10 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold text-xl transition-colors"
+                        className="w-10 h-10 bg-theme-elevated hover:bg-theme-hover rounded-lg font-bold text-xl transition-colors"
                         disabled={variablePushMode || microBurstMode}
                       >
                         -
                       </button>
                       <div className="text-center">
-                        <div className="text-4xl font-bold text-purple-400">
+                        <div className="text-4xl font-bold text-accent-muted">
                           {metronome.getTempo()} BPM
                         </div>
                         {variablePushMode && (
-                          <div className="text-xs text-yellow-400 mt-1">
+                          <div className="text-xs text-status-warning mt-1">
                             {variablePushBeatInCycle < 32 ? '▲ Ramping Up' : '▼ Ramping Down'}
                           </div>
                         )}
                         {microBurstMode && (
-                          <div className="text-xs text-orange-400 mt-1 font-bold">
+                          <div className="text-xs text-status-info mt-1 font-bold">
                             {microBurstInSoundPhase ? '🔊 BURST' : '🔇 REST'}
                           </div>
                         )}
                       </div>
                       <button
                         onClick={() => metronome.setTempo(Math.min(300, metronome.getTempo() + 5))}
-                        className="w-10 h-10 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold text-xl transition-colors"
+                        className="w-10 h-10 bg-theme-elevated hover:bg-theme-hover rounded-lg font-bold text-xl transition-colors"
                         disabled={variablePushMode || microBurstMode}
                       >
                         +
@@ -651,12 +654,12 @@ function App() {
                     value={metronome.getTempo()}
                     onChange={(e) => metronome.setTempo(parseInt(e.target.value))}
                     disabled={variablePushMode || microBurstMode}
-                    className="w-full h-2 bg-gray-700 rounded-lg mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full h-2 bg-theme-elevated rounded-lg mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
 
                   {/* Volume Control */}
                   <div className="mb-6">
-                    <label className="block text-gray-400 text-sm mb-2 font-semibold">
+                    <label className="block text-content-secondary text-sm mb-2 font-semibold">
                       Volume: {Math.round((volume / 2.0) * 100)}%
                     </label>
                     <input
@@ -665,20 +668,20 @@ function App() {
                       max="100"
                       value={(volume / 2.0) * 100}
                       onChange={(e) => setVolume((parseInt(e.target.value) / 100) * 2.0)}
-                      className="w-full h-2 bg-gray-700 rounded-lg"
+                      className="w-full h-2 bg-theme-elevated rounded-lg"
                     />
                   </div>
 
                   {/* Subdivision Selector */}
                   <div className="mb-6">
-                    <label className="block text-gray-400 text-sm mb-2 font-semibold">Clicks Per Beat</label>
+                    <label className="block text-content-secondary text-sm mb-2 font-semibold">Clicks Per Beat</label>
                     <div className="grid grid-cols-3 gap-2">
                       <button
                         onClick={() => setSubdivision('quarter')}
                         className={`py-2 rounded-lg text-lg font-bold transition-all ${
                           subdivision === 'quarter'
-                            ? 'bg-purple-500 text-white'
-                            : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                            ? 'bg-accent text-content-primary'
+                            : 'bg-theme-elevated text-content-secondary hover:bg-theme-hover'
                         }`}
                       >
                         1x
@@ -687,8 +690,8 @@ function App() {
                         onClick={() => setSubdivision('eighth')}
                         className={`py-2 rounded-lg text-lg font-bold transition-all ${
                           subdivision === 'eighth'
-                            ? 'bg-purple-500 text-white'
-                            : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                            ? 'bg-accent text-content-primary'
+                            : 'bg-theme-elevated text-content-secondary hover:bg-theme-hover'
                         }`}
                       >
                         2x
@@ -697,14 +700,14 @@ function App() {
                         onClick={() => setSubdivision('sixteenth')}
                         className={`py-2 rounded-lg text-lg font-bold transition-all ${
                           subdivision === 'sixteenth'
-                            ? 'bg-purple-500 text-white'
-                            : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                            ? 'bg-accent text-content-primary'
+                            : 'bg-theme-elevated text-content-secondary hover:bg-theme-hover'
                         }`}
                       >
                         4x
                       </button>
                     </div>
-                    <div className="text-xs text-gray-500 mt-2 text-center">
+                    <div className="text-xs text-content-tertiary mt-2 text-center">
                       {subdivision === 'quarter' && '1 click per beat'}
                       {subdivision === 'eighth' && '2 clicks per beat'}
                       {subdivision === 'sixteenth' && '4 clicks per beat'}
@@ -714,14 +717,14 @@ function App() {
                   <button
                     onClick={handlePlay}
                     className={`w-full py-3 rounded-lg font-bold transition-all ${
-                      isPlaying ? 'bg-red-500 hover:bg-red-600' : 'bg-purple-500 hover:bg-purple-600'
+                      isPlaying ? 'bg-status-error hover:bg-status-error-hover' : 'bg-accent hover:bg-accent-hover'
                     }`}
                   >
                     {isPlaying ? 'STOP' : 'START'}
                   </button>
                 </>
               ) : (
-                <div className="text-center py-8 text-gray-400">
+                <div className="text-center py-8 text-content-secondary">
                   Select a pattern from the database to practice
                 </div>
               )}
@@ -729,31 +732,31 @@ function App() {
 
             {/* Progressive Workout Session */}
             {selectedPattern && sessionExercises.length > 0 && (
-              <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-                <h3 className="text-xl font-bold text-white mb-4">Workout Plan</h3>
+              <div className="bg-theme-surface rounded-lg p-6 border border-border">
+                <h3 className="text-xl font-bold text-content-primary mb-4">Workout Plan</h3>
 
                 {/* Overall Progress Bar */}
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-gray-400">Overall Progress</span>
-                    <span className="text-xs text-gray-400">{getWorkoutProgress()}%</span>
+                    <span className="text-xs text-content-secondary">Overall Progress</span>
+                    <span className="text-xs text-content-secondary">{getWorkoutProgress()}%</span>
                   </div>
-                  <div className="h-3 bg-gray-900 rounded-full overflow-hidden">
+                  <div className="h-3 bg-theme-base rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-purple-500 to-green-500 transition-all"
+                      className="h-full bg-gradient-progress transition-all"
                       style={{ width: `${getWorkoutProgress()}%` }}
                     />
                   </div>
                 </div>
 
                 {/* Session Reps Counter */}
-                <div className="mb-4 p-3 bg-purple-900/20 border border-purple-500/50 rounded-lg">
+                <div className="mb-4 p-3 bg-accent-bg border border-accent-border rounded-lg">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-300">Session Reps:</span>
-                    <span className="text-2xl font-bold text-purple-400">{sessionReps}</span>
+                    <span className="text-sm text-content-muted">Session Reps:</span>
+                    <span className="text-2xl font-bold text-accent-muted">{sessionReps}</span>
                   </div>
                   {selectedPattern && selectedPattern.total_sessions > 0 && (
-                    <div className="text-xs text-gray-500 mt-1 text-right">
+                    <div className="text-xs text-content-tertiary mt-1 text-right">
                       Avg: {Math.round(selectedPattern.total_reps / selectedPattern.total_sessions)}/session
                     </div>
                   )}
@@ -773,33 +776,33 @@ function App() {
                         onDoubleClick={() => handleStartExercise(idx)}
                         className={`p-3 rounded-lg border cursor-pointer transition-all ${
                           isComplete
-                            ? 'bg-green-900/20 border-green-500'
+                            ? 'bg-accent2-bg border-accent2-border'
                             : idx === currentExerciseIndex
-                            ? 'bg-purple-900/30 border-purple-500'
-                            : 'bg-gray-900 border-gray-700 hover:border-gray-600'
+                            ? 'bg-accent-bg-strong border-accent'
+                            : 'bg-theme-base border-border hover:border-border-hover'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <span className="font-semibold text-white text-sm">{exercise.type}</span>
+                          <span className="font-semibold text-content-primary text-sm">{exercise.type}</span>
                           <div className="flex items-center gap-2">
-                            <span className="text-gray-400 text-xs">{exercise.durationMinutes} min</span>
-                            {isComplete && <span className="text-green-400 text-xs font-bold">✓ COMPLETE</span>}
+                            <span className="text-content-secondary text-xs">{exercise.durationMinutes} min</span>
+                            {isComplete && <span className="text-accent2-muted text-xs font-bold">✓ COMPLETE</span>}
                           </div>
                         </div>
-                        <div className="text-gray-400 text-xs mb-2">{exercise.description}</div>
+                        <div className="text-content-secondary text-xs mb-2">{exercise.description}</div>
 
                         {/* Individual Exercise Progress - Always show if there's progress */}
                         {exerciseTime > 0 && (
                           <div className="mt-2">
-                            <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
+                            <div className="h-1 bg-theme-elevated rounded-full overflow-hidden">
                               <div
                                 className={`h-full transition-all ${
-                                  isComplete ? 'bg-green-500' : 'bg-purple-500'
+                                  isComplete ? 'bg-accent2' : 'bg-accent'
                                 }`}
                                 style={{ width: `${exerciseProgress}%` }}
                               />
                             </div>
-                            <div className="text-xs text-gray-400 mt-1 text-center">
+                            <div className="text-xs text-content-secondary mt-1 text-center">
                               {exerciseTime}s / {exerciseDurationSeconds}s
                             </div>
                           </div>
@@ -809,11 +812,11 @@ function App() {
                   })}
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-gray-700">
-                  <div className="text-gray-400 text-xs text-center">
+                <div className="mt-4 pt-4 border-t border-border">
+                  <div className="text-content-secondary text-xs text-center">
                     Double-click an exercise to start with count-in
                   </div>
-                  <div className="text-gray-400 text-sm mt-2">
+                  <div className="text-content-secondary text-sm mt-2">
                     Total: {sessionExercises.reduce((sum, e) => sum + e.durationMinutes, 0)} minutes
                   </div>
                 </div>
@@ -821,7 +824,7 @@ function App() {
                 {/* Save Workout Button */}
                 <button
                   onClick={handleSaveWorkout}
-                  className="w-full mt-6 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold rounded-lg transition-all"
+                  className="w-full mt-6 px-6 py-3 bg-gradient-button hover:bg-gradient-button-hover text-content-primary font-bold rounded-lg transition-all"
                 >
                   💾 Save Workout
                 </button>
@@ -846,15 +849,15 @@ function App() {
         {/* Add Pattern Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowAddModal(false)}>
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-2xl font-bold text-white mb-4">Add Pattern</h3>
+            <div className="bg-theme-surface rounded-lg p-6 border border-border max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-2xl font-bold text-content-primary mb-4">Add Pattern</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-gray-400 text-sm mb-2">Pattern</label>
+                  <label className="block text-content-secondary text-sm mb-2">Pattern</label>
                   <select
                     value={newPatternId}
                     onChange={(e) => setNewPatternId(parseInt(e.target.value))}
-                    className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg text-lg font-mono font-bold"
+                    className="w-full bg-theme-elevated text-content-primary px-4 py-2 rounded-lg text-lg font-mono font-bold"
                   >
                     {PATTERNS.map(p => (
                       <option key={p.id} value={p.id}>{p.pattern}</option>
@@ -862,39 +865,39 @@ function App() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-gray-400 text-sm mb-2">Starting BPM</label>
+                  <label className="block text-content-secondary text-sm mb-2">Starting BPM</label>
                   <input
                     type="number"
                     min="40"
                     max="200"
                     value={newStartingBpm}
                     onChange={(e) => setNewStartingBpm(parseInt(e.target.value) || 60)}
-                    className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg"
+                    className="w-full bg-theme-elevated text-content-primary px-4 py-2 rounded-lg"
                     placeholder="e.g., 60"
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 text-sm mb-2">Target BPM</label>
+                  <label className="block text-content-secondary text-sm mb-2">Target BPM</label>
                   <input
                     type="number"
                     min="60"
                     max="300"
                     value={newTargetBpm}
                     onChange={(e) => setNewTargetBpm(parseInt(e.target.value) || 150)}
-                    className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg"
+                    className="w-full bg-theme-elevated text-content-primary px-4 py-2 rounded-lg"
                     placeholder="e.g., 150"
                   />
                 </div>
                 <div className="flex gap-3 mt-6">
                   <button
                     onClick={handleAddPattern}
-                    className="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 rounded-lg transition-colors"
+                    className="flex-1 bg-accent hover:bg-accent-hover text-content-primary font-bold py-3 rounded-lg transition-colors"
                   >
                     Add
                   </button>
                   <button
                     onClick={() => setShowAddModal(false)}
-                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg transition-colors"
+                    className="flex-1 bg-theme-elevated hover:bg-theme-hover text-content-primary font-bold py-3 rounded-lg transition-colors"
                   >
                     Cancel
                   </button>
