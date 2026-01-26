@@ -100,6 +100,8 @@ export interface PatternItem {
   total_practice_minutes: number
   total_reps: number
   last_practiced: string
+  // Workout configuration
+  workoutConfigId?: string
 }
 
 export type TreeItem = PatternFolder | PatternItem
@@ -108,9 +110,10 @@ interface PatternDatabaseProps {
   onSelectPattern: (pattern: PatternItem) => void
   selectedPatternId: string | null
   onShowAnalytics?: (pattern: PatternItem) => void
+  onEditWorkout?: (pattern: PatternItem) => void
 }
 
-export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnalytics }: PatternDatabaseProps) {
+export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnalytics, onEditWorkout }: PatternDatabaseProps) {
   const [items, setItems] = useState<TreeItem[]>([])
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['root']))
   const [showAddModal, setShowAddModal] = useState(false)
@@ -123,7 +126,6 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
 
   // New pattern form
   const [newPatternName, setNewPatternName] = useState('')
-  const [newPatternSequence, setNewPatternSequence] = useState('')
   const [newPatternComment, setNewPatternComment] = useState('')
   const [newStartingBpm, setNewStartingBpm] = useState(60)
   const [newTargetBpm, setNewTargetBpm] = useState(150)
@@ -238,20 +240,16 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
   }
 
   const handleAddPattern = () => {
-    if (!newPatternName.trim() || !newPatternSequence.trim()) return
+    if (!newPatternName.trim()) return
 
-    // Parse sequence (e.g., "1213" -> [1, 2, 1, 3])
-    const sequence = newPatternSequence.split('').map(n => parseInt(n))
-    if (sequence.length !== 4 || sequence.some(n => isNaN(n) || n < 1 || n > 3)) {
-      alert('Pattern must be 4 digits using only 1, 2, 3')
-      return
-    }
+    // Use default sequence for custom patterns
+    const defaultSequence = [1, 2, 3, 1]
 
     const newPattern: PatternItem = {
       id: `pattern-${Date.now()}`,
       name: newPatternName,
-      pattern: newPatternSequence,
-      sequence,
+      pattern: newPatternName, // Use name as pattern identifier
+      sequence: defaultSequence,
       folderId: selectedFolderId,
       comment: newPatternComment,
       isFolder: false,
@@ -266,7 +264,6 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
     const newItems = [...items, newPattern]
     saveDatabase(newItems)
     setNewPatternName('')
-    setNewPatternSequence('')
     setNewPatternComment('')
     setShowAddModal(false)
   }
@@ -475,6 +472,13 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                           </div>
                         </div>
                       )}
+                      {onEditWorkout && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onEditWorkout(pattern) }}
+                          className="text-[8px] px-1 py-0.5 bg-accent2-bg hover:bg-accent2-bg-strong text-accent2-muted rounded"
+                          title="Edit Workout"
+                        >⚙️</button>
+                      )}
                       {onShowAnalytics && (
                         <button
                           onClick={(e) => { e.stopPropagation(); onShowAnalytics(pattern) }}
@@ -537,7 +541,9 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
           </button>
           <button
             onClick={() => {
-              setSelectedFolderId('root')
+              // Default to first folder
+              const folders = getFolders()
+              setSelectedFolderId(folders.length > 0 ? folders[0].id : 'root')
               setAddModalType('pattern')
               setShowAddModal(true)
             }}
@@ -577,33 +583,36 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
             ) : (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-content-secondary text-sm mb-2">Pattern Name</label>
+                  <label className="block text-content-secondary text-sm mb-2">Save to Folder</label>
+                  <select
+                    value={selectedFolderId}
+                    onChange={(e) => setSelectedFolderId(e.target.value)}
+                    className="w-full bg-theme-elevated text-content-primary px-4 py-2 rounded-lg"
+                  >
+                    {getFolders().map(folder => (
+                      <option key={folder.id} value={folder.id}>
+                        📁 {folder.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-content-secondary text-sm mb-2">Name</label>
                   <input
                     type="text"
                     value={newPatternName}
                     onChange={(e) => setNewPatternName(e.target.value)}
-                    className="w-full bg-theme-elevated text-content-primary px-4 py-2 rounded-lg font-mono"
-                    placeholder="e.g., 1213"
+                    className="w-full bg-theme-elevated text-content-primary px-4 py-2 rounded-lg"
+                    placeholder="e.g., Chord Transitions, Scale Run, etc."
                   />
                 </div>
                 <div>
-                  <label className="block text-content-secondary text-sm mb-2">Pattern Sequence (4 digits: 1, 2, 3)</label>
-                  <input
-                    type="text"
-                    value={newPatternSequence}
-                    onChange={(e) => setNewPatternSequence(e.target.value)}
-                    className="w-full bg-theme-elevated text-content-primary px-4 py-2 rounded-lg font-mono text-lg"
-                    placeholder="e.g., 1213"
-                    maxLength={4}
-                  />
-                </div>
-                <div>
-                  <label className="block text-content-secondary text-sm mb-2">Comment (optional)</label>
+                  <label className="block text-content-secondary text-sm mb-2">Description (optional)</label>
                   <textarea
                     value={newPatternComment}
                     onChange={(e) => setNewPatternComment(e.target.value)}
                     className="w-full bg-theme-elevated text-content-primary px-4 py-2 rounded-lg"
-                    placeholder="Notes about this pattern..."
+                    placeholder="What this exercise focuses on..."
                     rows={2}
                   />
                 </div>

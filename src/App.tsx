@@ -6,6 +6,9 @@ import { Exercise } from './practice-routines'
 import { Analytics } from './Analytics'
 import { MetaAnalytics } from './MetaAnalytics'
 import { PatternDatabase, PatternItem } from './pattern-database'
+import { WorkoutEditor } from './components/WorkoutEditor'
+import { getWorkoutConfig, getExerciseBpm } from './workout-storage'
+import { WorkoutConfig } from './workout-types'
 
 function App() {
   const [selectedPattern, setSelectedPattern] = useState<PatternItem | null>(null)
@@ -21,6 +24,8 @@ function App() {
   const [volume, setVolume] = useState<number>(1.4)
   const [showAnalytics, setShowAnalytics] = useState<UserPatternProgressEntity | null>(null)
   const [showMetaAnalytics, setShowMetaAnalytics] = useState(false)
+  const [showWorkoutEditor, setShowWorkoutEditor] = useState(false)
+  const [editingWorkoutPattern, setEditingWorkoutPattern] = useState<PatternItem | null>(null)
   const [workoutStartTime, setWorkoutStartTime] = useState<Date | null>(null)
   const [workoutStartBpm, setWorkoutStartBpm] = useState<number>(0)
   const [sessionReps, setSessionReps] = useState<number>(0)
@@ -31,6 +36,8 @@ function App() {
   const [clickCount, setClickCount] = useState(0) // Track total clicks for rep counting
   const lastClickCountRef = useRef(0) // Track last processed click count
   const lastModeRef = useRef({ microBurst: false, subdivision: 'quarter' as Subdivision })
+  const exerciseStartTimeRef = useRef<number | null>(null)
+  const lastExerciseIndexRef = useRef(0)
   const [variablePushMode, setVariablePushMode] = useState(false)
   const [, setVariablePushBaseTempo] = useState(0)
   const [variablePushBeatInCycle, setVariablePushBeatInCycle] = useState(0)
@@ -146,24 +153,22 @@ function App() {
 
   // Track exercise time using actual elapsed time (more accurate than setInterval)
   useEffect(() => {
-    let startTime: number | null = null
     let animationFrame: number | null = null
-    let lastExerciseIndex = currentExerciseIndex
 
     const updateTime = () => {
       if (!isPlaying) return
 
-      if (startTime === null) {
-        startTime = Date.now()
+      if (exerciseStartTimeRef.current === null) {
+        exerciseStartTimeRef.current = Date.now()
       }
 
       // Reset if exercise changed
-      if (lastExerciseIndex !== currentExerciseIndex) {
-        startTime = Date.now()
-        lastExerciseIndex = currentExerciseIndex
+      if (lastExerciseIndexRef.current !== currentExerciseIndex) {
+        exerciseStartTimeRef.current = Date.now()
+        lastExerciseIndexRef.current = currentExerciseIndex
       }
 
-      const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000)
+      const elapsedSeconds = Math.floor((Date.now() - exerciseStartTimeRef.current) / 1000)
 
       setExerciseTimes(prev => {
         const currentTime = prev[currentExerciseIndex] || 0
@@ -251,8 +256,18 @@ function App() {
     metronome.setPattern(pattern.sequence)
     metronome.setTempo(pattern.current_bpm)
 
-    // Load percentage-based workout
-    const exercises = getPercentageWorkout(pattern.current_bpm, pattern.target_bpm)
+    // Load workout - use custom config if available, otherwise default
+    let exercises: Exercise[]
+    if (pattern.workoutConfigId) {
+      const config = getWorkoutConfig(pattern.workoutConfigId)
+      if (config) {
+        exercises = getWorkoutFromConfig(config, pattern.current_bpm, pattern.target_bpm)
+      } else {
+        exercises = getPercentageWorkout(pattern.current_bpm, pattern.target_bpm)
+      }
+    } else {
+      exercises = getPercentageWorkout(pattern.current_bpm, pattern.target_bpm)
+    }
     setSessionExercises(exercises)
     setCurrentExerciseIndex(0)
 
@@ -265,6 +280,41 @@ function App() {
     setSessionReps(0)
     setBeatCount(0)
     setClickCount(0)
+    exerciseStartTimeRef.current = null
+    lastExerciseIndexRef.current = 0
+  }
+
+  const handleEditWorkout = (pattern: PatternItem) => {
+    setEditingWorkoutPattern(pattern)
+    setShowWorkoutEditor(true)
+  }
+
+  const handleSaveWorkoutConfig = (configId: string) => {
+    // Update pattern in localStorage with new workoutConfigId
+    const storedData = localStorage.getItem('patternDatabase')
+    if (storedData && editingWorkoutPattern) {
+      const items = JSON.parse(storedData)
+      const updatedItems = items.map((item: any) => {
+        if (item.id === editingWorkoutPattern.id && !item.isFolder) {
+          return { ...item, workoutConfigId: configId }
+        }
+        return item
+      })
+      localStorage.setItem('patternDatabase', JSON.stringify(updatedItems))
+
+      // Update selectedPattern if it's the same pattern
+      if (selectedPattern && selectedPattern.id === editingWorkoutPattern.id) {
+        const updatedPattern = { ...selectedPattern, workoutConfigId: configId }
+        setSelectedPattern(updatedPattern)
+
+        // Reload workout with new config
+        const config = getWorkoutConfig(configId)
+        if (config) {
+          const exercises = getWorkoutFromConfig(config, updatedPattern.current_bpm, updatedPattern.target_bpm)
+          setSessionExercises(exercises)
+        }
+      }
+    }
   }
 
   const handleSaveWorkout = async () => {
@@ -359,6 +409,26 @@ function App() {
     setSessionReps(0)
     setBeatCount(0)
     setClickCount(0)
+    exerciseStartTimeRef.current = null
+    lastExerciseIndexRef.current = 0
+  }
+
+  const getWorkoutFromConfig = (config: WorkoutConfig, currentBpm: number, _targetBpm: number): Exercise[] => {
+    return config.exercises
+      .filter(ex => ex.enabled)
+      .map(ex => {
+        // Use fixedBpm if set, otherwise calculate from ratio
+        const bpm = getExerciseBpm(ex, currentBpm)
+        const speedLabel = ex.fixedBpm ? `${bpm} BPM` : `${Math.round(ex.tempoRatio * 100)}%`
+
+        return {
+          type: ex.type as any, // Allow custom types
+          durationMinutes: ex.durationMinutes,
+          startingTempo: bpm,
+          description: `${ex.type} at ${speedLabel} (${bpm} BPM)`,
+          protocol: ex.protocol
+        }
+      })
   }
 
   const getPercentageWorkout = (currentBpm: number, targetBpm: number): Exercise[] => {
@@ -582,6 +652,7 @@ function App() {
               onSelectPattern={handleSelectPatternFromDatabase}
               selectedPatternId={selectedPattern?.id || null}
               onShowAnalytics={(pattern) => setShowAnalytics(pattern as any)}
+              onEditWorkout={handleEditWorkout}
             />
           </div>
 
@@ -844,6 +915,19 @@ function App() {
         {/* Meta Analytics Modal */}
         {showMetaAnalytics && (
           <MetaAnalytics onClose={() => setShowMetaAnalytics(false)} />
+        )}
+
+        {/* Workout Editor Modal */}
+        {showWorkoutEditor && editingWorkoutPattern && (
+          <WorkoutEditor
+            pattern={editingWorkoutPattern}
+            workoutConfigId={editingWorkoutPattern.workoutConfigId}
+            onClose={() => {
+              setShowWorkoutEditor(false)
+              setEditingWorkoutPattern(null)
+            }}
+            onSave={handleSaveWorkoutConfig}
+          />
         )}
 
         {/* Add Pattern Modal */}

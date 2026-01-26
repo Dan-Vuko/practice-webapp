@@ -56,14 +56,25 @@ export function MetaAnalytics({ onClose }: MetaAnalyticsProps) {
 
   const loadWorkouts = async () => {
     try {
-      const response = await fetch('http://localhost:3004/api/workouts')
-      const data = await response.json()
+      // Load from localStorage
+      const workoutHistory = JSON.parse(localStorage.getItem('workoutHistory') || '[]')
 
-      if (data.success) {
-        setWorkouts(data.workouts.sort((a: Workout, b: Workout) =>
-          new Date(a.date).getTime() - new Date(b.date).getTime()
-        ))
-      }
+      // Map to expected format (handle different field names)
+      const mappedWorkouts: Workout[] = workoutHistory.map((w: any) => ({
+        id: w.id || `workout-${Date.now()}`,
+        pattern_id: w.pattern_id || w.patternId || '',
+        pattern_name: w.pattern_name || w.patternName || 'Unknown',
+        date: w.date || w.timestamp || new Date().toISOString(),
+        duration_minutes: w.duration_minutes || w.durationMinutes || 0,
+        practice_minutes: w.practice_minutes || w.practiceMinutes || 0,
+        starting_bpm: w.starting_bpm || w.startingBpm || 60,
+        ending_bpm: w.ending_bpm || w.endingBpm || 60,
+        total_reps: w.total_reps || w.totalReps || 0
+      }))
+
+      setWorkouts(mappedWorkouts.sort((a, b) =>
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      ))
     } catch (error) {
       console.error('Failed to load workouts:', error)
     } finally {

@@ -22,40 +22,43 @@ export function Analytics({ progress, onClose }: AnalyticsProps) {
 
   const loadSessions = async () => {
     try {
-      // Fetch from server instead of localStorage
-      const response = await fetch('http://localhost:3004/api/workouts')
-      const data = await response.json()
+      // Load from localStorage
+      const workoutHistory = JSON.parse(localStorage.getItem('workoutHistory') || '[]')
 
-      if (data.success) {
-        // Filter workouts for this pattern
-        const patternWorkouts = data.workouts.filter((w: any) => w.pattern_name === progress.pattern_name)
+      // Filter workouts for this pattern (match by pattern name or id)
+      const patternWorkouts = workoutHistory.filter((w: any) =>
+        w.pattern_name === progress.pattern_name ||
+        w.pattern_id === progress.id ||
+        w.patternName === progress.pattern_name
+      )
 
-        // Convert to session format
-        const sessionData = patternWorkouts.map((w: any) => ({
-          id: w.id,
-          user_pattern_progress_id: progress.id,
-          start_time: w.date,
-          end_time: w.date,
-          duration_minutes: w.practice_minutes,
-          starting_bpm: w.starting_bpm,
-          ending_bpm: w.ending_bpm,
-          avg_accuracy: 0,
-          total_attempts: 0,
-          successful_attempts: 0,
-          myelination_cycle_week: 0,
-          hours_since_last_session: 0,
-          in_consolidation_window: false
-        }))
+      // Convert to session format
+      const sessionData = patternWorkouts.map((w: any, i: number) => ({
+        id: w.id || `session-${i}`,
+        user_pattern_progress_id: progress.id,
+        start_time: w.date || w.timestamp || new Date().toISOString(),
+        end_time: w.date || w.timestamp || new Date().toISOString(),
+        duration_minutes: w.practice_minutes || w.durationMinutes || 0,
+        starting_bpm: w.starting_bpm || w.startingBpm || w.bpm || 60,
+        ending_bpm: w.ending_bpm || w.endingBpm || w.bpm || 60,
+        avg_accuracy: 0,
+        total_attempts: 0,
+        successful_attempts: 0,
+        myelination_cycle_week: 0,
+        hours_since_last_session: 0,
+        in_consolidation_window: false
+      }))
 
-        setSessions(sessionData.sort((a: SessionEntity, b: SessionEntity) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()))
+      setSessions(sessionData.sort((a: SessionEntity, b: SessionEntity) =>
+        new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+      ))
 
-        // Calculate projection
-        if (sessionData.length >= 2) {
-          calculateProjection(sessionData)
-        }
+      // Calculate projection
+      if (sessionData.length >= 2) {
+        calculateProjection(sessionData)
       }
     } catch (error) {
-      console.error('❌ Failed to load workouts from server:', error)
+      console.error('❌ Failed to load workouts from localStorage:', error)
       setSessions([])
     }
   }
@@ -106,18 +109,13 @@ export function Analytics({ progress, onClose }: AnalyticsProps) {
   const handleDeleteSession = async (sessionId: string) => {
     if (confirm('Delete this workout session?')) {
       try {
-        // Delete via server endpoint
-        const response = await fetch(`http://localhost:3004/api/workouts/${sessionId}`, {
-          method: 'DELETE'
-        })
-        const result = await response.json()
+        // Delete from localStorage
+        const workoutHistory = JSON.parse(localStorage.getItem('workoutHistory') || '[]')
+        const filtered = workoutHistory.filter((w: any) => w.id !== sessionId)
+        localStorage.setItem('workoutHistory', JSON.stringify(filtered))
 
-        if (result.success) {
-          console.log('✅ Workout deleted from file')
-          await loadSessions()
-        } else {
-          console.error('❌ Failed to delete workout:', result.error)
-        }
+        console.log('✅ Workout deleted from localStorage')
+        await loadSessions()
       } catch (error) {
         console.error('❌ Error deleting workout:', error)
       }

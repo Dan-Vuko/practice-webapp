@@ -7,24 +7,9 @@
       "config": {
         "distDir": "dist"
       }
-    },
-    {
-      "src": "apps/fretmaster/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
     }
   ],
   "routes": [
-    {
-      "src": "/fretmaster",
-      "dest": "/apps/fretmaster/dist/index.html"
-    },
-    {
-      "src": "/fretmaster/(.*)",
-      "dest": "/apps/fretmaster/dist/$1"
-    },
     {
       "src": "/(.*)",
       "dest": "/dist/$1"
