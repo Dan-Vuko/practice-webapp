@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme CSS Variables - defaults match original Gemini theme */
+:root {
+  --bg-base: #111827;
+  --bg-surface: #1f2937;
+  --bg-elevated: #374151;
+  --bg-hover: #4b5563;
+  --bg-active: #6b7280;
+  --border-default: #374151;
+  --border-hover: #4b5563;
+  --border-strong: #6b7280;
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --text-tertiary: #6b7280;
+  --text-muted: #d1d5db;
+  --accent-primary: #a855f7;
+  --accent-primary-hover: #9333ea;
+  --accent-primary-dark: #7c3aed;
+  --accent-primary-muted: #c084fc;
+  --accent-primary-bg: rgba(88, 28, 135, 0.2);
+  --accent-primary-bg-strong: rgba(88, 28, 135, 0.3);
+  --accent-primary-border: rgba(168, 85, 247, 0.5);
+  --accent-secondary: #22c55e;
+  --accent-secondary-hover: #16a34a;
+  --accent-secondary-muted: #4ade80;
+  --accent-secondary-bg: rgba(20, 83, 45, 0.2);
+  --accent-secondary-border: #22c55e;
+  --accent-tertiary: #3b82f6;
+  --accent-tertiary-hover: #2563eb;
+  --accent-tertiary-muted: #60a5fa;
+  --accent-tertiary-bg: rgba(30, 58, 138, 0.5);
+  --accent-tertiary-dark: #1e3a8a;
+  --status-error: #ef4444;
+  --status-error-hover: #dc2626;
+  --status-warning: #f59e0b;
+  --status-warning-muted: #facc15;
+  --status-info: #f97316;
+  --gradient-title: linear-gradient(to right, #a855f7, #22c55e);
+  --gradient-button: linear-gradient(to right, #9333ea, #3b82f6);
+  --gradient-button-hover: linear-gradient(to right, #7c3aed, #2563eb);
+  --gradient-progress: linear-gradient(to right, #a855f7, #22c55e);
+  --beat-loud: #ef4444;
+  --beat-normal: #60a5fa;
+  --beat-soft: #6b7280;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-base);
+  min-height: 100vh;
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Chrome scrollbar styling to match theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-elevated);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--bg-hover);
+}
+
+.bg-gradient-title {
+  background: var(--gradient-title);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.bg-gradient-button {
+  background: var(--gradient-button);
+}
+
+.bg-gradient-button:hover {
+  background: var(--gradient-button-hover);
+}
+
+.bg-gradient-progress {
+  background: var(--gradient-progress);
+}
