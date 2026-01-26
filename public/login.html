@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guitar Practice Portal - Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 min-h-screen flex items-center justify-center">
+  <div class="bg-gray-800 p-8 rounded-lg border border-gray-700 w-96">
+    <h1 class="text-3xl font-bold text-white mb-6">Guitar Practice Portal</h1>
+    <form id="loginForm">
+      <input
+        type="password"
+        id="password"
+        placeholder="Enter password"
+        class="w-full bg-gray-700 text-white px-4 py-3 rounded-lg mb-4"
+        required
+      />
+      <button
+        type="submit"
+        class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg"
+      >
+        Login
+      </button>
+      <div id="error" class="text-red-400 text-sm mt-2 hidden"></div>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      const password = document.getElementById('password').value
+      const error = document.getElementById('error')
+
+      try {
+        const res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        })
+
+        const data = await res.json()
+
+        if (data.success) {
+          window.location.href = '/'
+        } else {
+          error.textContent = 'Incorrect password'
+          error.classList.remove('hidden')
+        }
+      } catch (err) {
+        error.textContent = 'Login failed'
+        error.classList.remove('hidden')
+      }
+    })
+  </script>
+</body>
+</html>
