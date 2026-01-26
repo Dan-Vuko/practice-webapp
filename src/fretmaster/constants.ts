@@ -214,6 +214,119 @@ const CHORDS_BASE: Record<string, Record<string, Structure>> = {
       ]
     },
   },
+  'Minor Blues': {
+    // TRUE TRIAD PAIR - the only one with zero overlap
+    minor_blues_sus_min: {
+      name: 'Minor Blues: Sus(I) + min(bIII)',
+      intervals: [0, 3, 5, 6, 7, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-red-500', textColor: 'text-white' },     // 1 - Sus(I)
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },    // b3 - min(bIII)
+        { bgColor: 'bg-red-500', textColor: 'text-white' },     // 4 - Sus(I)
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },    // b5 - min(bIII)
+        { bgColor: 'bg-red-500', textColor: 'text-white' },     // 5 - Sus(I)
+        { bgColor: 'bg-blue-500', textColor: 'text-white' }     // b7 - min(bIII)
+      ]
+    },
+    // TRIADS + ALTERNATIVE CLUSTERS
+    minor_blues_sus4: {
+      name: 'Minor Blues: Sus(IV) + Cluster',
+      intervals: [0, 3, 5, 6, 7, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-orange-500', textColor: 'text-white' },  // 1 - Sus(IV)
+        { bgColor: 'bg-blue-600', textColor: 'text-white' },    // b3 - Cluster
+        { bgColor: 'bg-orange-500', textColor: 'text-white' },  // 4 - Sus(IV)
+        { bgColor: 'bg-blue-600', textColor: 'text-white' },    // b5 - Cluster
+        { bgColor: 'bg-blue-600', textColor: 'text-white' },    // 5 - Cluster
+        { bgColor: 'bg-orange-500', textColor: 'text-white' }   // b7 - Sus(IV)
+      ]
+    },
+    minor_blues_susb7: {
+      name: 'Minor Blues: Sus(bVII) + Cluster',
+      intervals: [0, 3, 5, 6, 7, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-emerald-500', textColor: 'text-white' }, // 1 - Cluster
+        { bgColor: 'bg-purple-600', textColor: 'text-white' },  // b3 - Sus(bVII)
+        { bgColor: 'bg-purple-600', textColor: 'text-white' },  // 4 - Sus(bVII)
+        { bgColor: 'bg-emerald-500', textColor: 'text-white' }, // b5 - Cluster
+        { bgColor: 'bg-emerald-500', textColor: 'text-white' }, // 5 - Cluster
+        { bgColor: 'bg-purple-600', textColor: 'text-white' }   // b7 - Sus(bVII)
+      ]
+    },
+    minor_blues_min1: {
+      name: 'Minor Blues: min(I) + Cluster',
+      intervals: [0, 3, 5, 6, 7, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-red-500', textColor: 'text-white' },     // 1 - min(I)
+        { bgColor: 'bg-red-500', textColor: 'text-white' },     // b3 - min(I)
+        { bgColor: 'bg-yellow-400', textColor: 'text-black' },  // 4 - Cluster
+        { bgColor: 'bg-yellow-400', textColor: 'text-black' },  // b5 - Cluster
+        { bgColor: 'bg-red-500', textColor: 'text-white' },     // 5 - min(I)
+        { bgColor: 'bg-yellow-400', textColor: 'text-black' }   // b7 - Cluster
+      ]
+    },
+    minor_blues_majb3: {
+      name: 'Minor Blues: Maj(bIII) + Cluster',
+      intervals: [0, 3, 5, 6, 7, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-yellow-400', textColor: 'text-black' },  // 1 - Cluster
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },    // b3 - Maj(bIII)
+        { bgColor: 'bg-yellow-400', textColor: 'text-black' },  // 4 - Cluster
+        { bgColor: 'bg-yellow-400', textColor: 'text-black' },  // b5 - Cluster
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },    // 5 - Maj(bIII)
+        { bgColor: 'bg-blue-500', textColor: 'text-white' }     // b7 - Maj(bIII)
+      ]
+    },
+    minor_blues_dim: {
+      name: 'Minor Blues: dim(I) + Cluster',
+      intervals: [0, 3, 5, 6, 7, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-violet-500', textColor: 'text-white' },  // 1 - dim(I)
+        { bgColor: 'bg-violet-500', textColor: 'text-white' },  // b3 - dim(I)
+        { bgColor: 'bg-amber-400', textColor: 'text-black' },   // 4 - Cluster
+        { bgColor: 'bg-violet-500', textColor: 'text-white' },  // b5 - dim(I)
+        { bgColor: 'bg-amber-400', textColor: 'text-black' },   // 5 - Cluster
+        { bgColor: 'bg-amber-400', textColor: 'text-black' }    // b7 - Cluster
+      ]
+    },
+    // CLUSTER PAIRS (consecutive positions)
+    minor_blues_cluster_123_456: {
+      name: 'Minor Blues: {1,b3,4} + {b5,5,b7}',
+      intervals: [0, 3, 5, 6, 7, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-emerald-500', textColor: 'text-white' }, // 1
+        { bgColor: 'bg-emerald-500', textColor: 'text-white' }, // b3
+        { bgColor: 'bg-emerald-500', textColor: 'text-white' }, // 4
+        { bgColor: 'bg-orange-500', textColor: 'text-white' },  // b5
+        { bgColor: 'bg-orange-500', textColor: 'text-white' },  // 5
+        { bgColor: 'bg-orange-500', textColor: 'text-white' }   // b7
+      ]
+    },
+    minor_blues_cluster_234_561: {
+      name: 'Minor Blues: {b3,4,b5} + {5,b7,1}',
+      intervals: [0, 3, 5, 6, 7, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-blue-600', textColor: 'text-white' },    // 1
+        { bgColor: 'bg-yellow-400', textColor: 'text-black' },  // b3
+        { bgColor: 'bg-yellow-400', textColor: 'text-black' },  // 4
+        { bgColor: 'bg-yellow-400', textColor: 'text-black' },  // b5
+        { bgColor: 'bg-blue-600', textColor: 'text-white' },    // 5
+        { bgColor: 'bg-blue-600', textColor: 'text-white' }     // b7
+      ]
+    },
+    minor_blues_cluster_345_612: {
+      name: 'Minor Blues: {4,b5,5} + {b7,1,b3}',
+      intervals: [0, 3, 5, 6, 7, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-purple-500', textColor: 'text-white' },  // 1
+        { bgColor: 'bg-purple-500', textColor: 'text-white' },  // b3
+        { bgColor: 'bg-lime-400', textColor: 'text-black' },    // 4
+        { bgColor: 'bg-lime-400', textColor: 'text-black' },    // b5
+        { bgColor: 'bg-lime-400', textColor: 'text-black' },    // 5
+        { bgColor: 'bg-purple-500', textColor: 'text-white' }   // b7
+      ]
+    },
+  },
   'Barry Harris System': {
     sixth_diminished: {
       name: 'Major 6th Diminished (Parent Scale)',
