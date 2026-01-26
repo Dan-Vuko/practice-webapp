@@ -165,6 +165,55 @@ const CHORDS_BASE: Record<string, Record<string, Structure>> = {
         { bgColor: 'bg-yellow-400', textColor: 'text-black' }  // 6 (9) - Overlap (A)
       ]
     },
+    // Hexatonic (no 4th): 1, 2, 3, 5, 6, 7 = intervals [0, 2, 4, 7, 9, 11]
+    hexatonic_v_vi: {
+      name: 'Hexatonic V+vi (G maj + A min)',
+      intervals: [0, 2, 4, 7, 9, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // R (0) - vi (A min)
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 2 (2) - V (G maj)
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 3 (4) - vi (A min)
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5 (7) - V (G maj)
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 6 (9) - vi (A min)
+        { bgColor: 'bg-blue-500', textColor: 'text-white' }    // 7 (11) - V (G maj)
+      ]
+    },
+    hexatonic_cluster_123_567: {
+      name: 'Hexatonic {1,2,3} + {5,6,7}',
+      intervals: [0, 2, 4, 7, 9, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-emerald-500', textColor: 'text-white' }, // R (0) - {1,2,3}
+        { bgColor: 'bg-emerald-500', textColor: 'text-white' }, // 2 (2) - {1,2,3}
+        { bgColor: 'bg-emerald-500', textColor: 'text-white' }, // 3 (4) - {1,2,3}
+        { bgColor: 'bg-orange-500', textColor: 'text-white' },  // 5 (7) - {5,6,7}
+        { bgColor: 'bg-orange-500', textColor: 'text-white' },  // 6 (9) - {5,6,7}
+        { bgColor: 'bg-orange-500', textColor: 'text-white' }   // 7 (11) - {5,6,7}
+      ]
+    },
+    hexatonic_cluster_235_671: {
+      name: 'Hexatonic {2,3,5} + {6,7,1}',
+      intervals: [0, 2, 4, 7, 9, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-fuchsia-500', textColor: 'text-white' }, // R (0) - {6,7,1}
+        { bgColor: 'bg-cyan-500', textColor: 'text-white' },    // 2 (2) - {2,3,5}
+        { bgColor: 'bg-cyan-500', textColor: 'text-white' },    // 3 (4) - {2,3,5}
+        { bgColor: 'bg-cyan-500', textColor: 'text-white' },    // 5 (7) - {2,3,5}
+        { bgColor: 'bg-fuchsia-500', textColor: 'text-white' }, // 6 (9) - {6,7,1}
+        { bgColor: 'bg-fuchsia-500', textColor: 'text-white' }  // 7 (11) - {6,7,1}
+      ]
+    },
+    hexatonic_cluster_356_712: {
+      name: 'Hexatonic {3,5,6} + {7,1,2}',
+      intervals: [0, 2, 4, 7, 9, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-violet-500', textColor: 'text-white' },  // R (0) - {7,1,2}
+        { bgColor: 'bg-violet-500', textColor: 'text-white' },  // 2 (2) - {7,1,2}
+        { bgColor: 'bg-amber-400', textColor: 'text-black' },   // 3 (4) - {3,5,6}
+        { bgColor: 'bg-amber-400', textColor: 'text-black' },   // 5 (7) - {3,5,6}
+        { bgColor: 'bg-amber-400', textColor: 'text-black' },   // 6 (9) - {3,5,6}
+        { bgColor: 'bg-violet-500', textColor: 'text-white' }   // 7 (11) - {7,1,2}
+      ]
+    },
   },
   'Barry Harris System': {
     sixth_diminished: {
