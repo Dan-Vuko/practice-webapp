@@ -166,7 +166,7 @@ const CHORDS_BASE: Record<string, Record<string, Structure>> = {
       ]
     },
     hexatonic_v_vi: {
-      name: 'Hexatonic V+vi (G maj + A min)',
+      name: 'Hexatonic V+vi (Maj + Min)',
       intervals: [0, 2, 4, 7, 9, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
       colors: [
         { bgColor: 'bg-red-500', textColor: 'text-white' },
@@ -193,12 +193,12 @@ const CHORDS_BASE: Record<string, Record<string, Structure>> = {
       name: 'Hexatonic {2,3,5} + {6,7,1}',
       intervals: [0, 2, 4, 7, 9, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
       colors: [
-        { bgColor: 'bg-fuchsia-500', textColor: 'text-white' },
-        { bgColor: 'bg-cyan-500', textColor: 'text-white' },
-        { bgColor: 'bg-cyan-500', textColor: 'text-white' },
-        { bgColor: 'bg-cyan-500', textColor: 'text-white' },
-        { bgColor: 'bg-fuchsia-500', textColor: 'text-white' },
-        { bgColor: 'bg-fuchsia-500', textColor: 'text-white' }
+        { bgColor: 'bg-yellow-400', textColor: 'text-black' },
+        { bgColor: 'bg-blue-600', textColor: 'text-white' },
+        { bgColor: 'bg-blue-600', textColor: 'text-white' },
+        { bgColor: 'bg-blue-600', textColor: 'text-white' },
+        { bgColor: 'bg-yellow-400', textColor: 'text-black' },
+        { bgColor: 'bg-yellow-400', textColor: 'text-black' }
       ]
     },
     hexatonic_cluster_356_712: {
