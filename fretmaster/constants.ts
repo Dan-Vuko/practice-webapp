@@ -139,6 +139,8 @@ const CHORDS_BASE: Record<string, Record<string, Structure>> = {
     major_pentatonic: { name: 'Major Pentatonic', intervals: [0, 2, 4, 7, 9].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })), colors: [] },
     minor_pentatonic: { name: 'Minor Pentatonic', intervals: [0, 3, 5, 7, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })), colors: [] },
     blues: { name: 'Blues Scale', intervals: [0, 3, 5, 6, 7, 10].map(i => ({ interval: i, name: i === 6 ? 'b5' : INTERVAL_NAMES[i] })), colors: [] },
+  },
+  'Hexatonic Patterns': {
     hexatonic_no4: { name: 'Hexatonic (no 4th)', intervals: [0, 2, 4, 7, 9, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })), colors: [] },
   }
 };

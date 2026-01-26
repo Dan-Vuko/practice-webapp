@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import type { Tuning, Color, RingColor, StructureLabelType, StructureKey, SavedPattern, Structure, StringGroup, Instrument, HexatonicPatternId } from '../types';
-import { TUNINGS, KEYS, COLOR_PALETTE, RING_COLOR_PALETTE, STRUCTURES, INTERVAL_NAMES, HEXATONIC_PATTERNS } from '../constants';
+import { TUNINGS, KEYS, COLOR_PALETTE, RING_COLOR_PALETTE, STRUCTURES, CATEGORIZED_STRUCTURES, INTERVAL_NAMES, HEXATONIC_PATTERNS } from '../constants';
 import { InfoIcon } from './icons/InfoIcon';
 import { ChevronIcon } from './icons/ChevronIcon';
 import { TrashIcon } from './icons/TrashIcon';
@@ -253,11 +253,13 @@ const Controls: React.FC<ControlsProps> = ({
               onChange={(e) => setSelectedStructure(e.target.value)}
               className="w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-cyan-500 focus:border-cyan-500"
             >
-              <optgroup label="Presets">
-                {Object.entries(STRUCTURES).map(([key, structure]: [string, Structure]) => (
-                  <option key={key} value={key}>{structure.name}</option>
-                ))}
-              </optgroup>
+              {Object.entries(CATEGORIZED_STRUCTURES).map(([category, structures]) => (
+                <optgroup key={category} label={category}>
+                  {Object.entries(structures).map(([key, structure]: [string, Structure]) => (
+                    <option key={key} value={key}>{structure.name}</option>
+                  ))}
+                </optgroup>
+              ))}
               {Object.keys(customStructures).length > 0 && (
                 <optgroup label="Custom">
                   {Object.entries(customStructures).map(([key, structure]: [string, Structure]) => (
