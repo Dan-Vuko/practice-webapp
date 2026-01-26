@@ -1,4 +1,5 @@
-import type { Tuning, Color, RingColor, Structure, FretboardTheme } from './types';
+
+import type { Tuning, Color, RingColor, Structure, HighlightedNote } from './types';
 
 export const FRET_COUNT = 15;
 
@@ -7,8 +8,6 @@ export const ALL_NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 
 export const SARGAM_NAMES = ['S', 'r', 'R', 'g', 'G', 'm', 'M', 'P', 'd', 'D', 'n', 'N'];
 
 export const INTERVAL_NAMES = ['R', 'b2', '2', 'b3', '3', '4', 'b5', '5', 'b6', '6', 'b7', '7'];
-
-export const ROMAN_DEGREES = ['I', 'bII', 'II', 'bIII', 'III', 'IV', 'bV', 'V', 'bVI', 'VI', 'bVII', 'VII'];
 
 export const KEYS: { name: string; value: string }[] = [
   { name: 'C', value: 'C' },
@@ -41,20 +40,18 @@ export const NOTE_MAP: Record<string, { index: number, displayName: string }> = 
 };
 
 export const TUNINGS: { [key: string]: Tuning } = {
-  daead: {
-    name: 'DAEAD',
-    strings: ['D4', 'A3', 'E3', 'A2', 'D2'],
+  standard: {
+    name: 'Standard (EADGBe)',
+    strings: ['E4', 'B3', 'G3', 'D3', 'A2', 'E2'],
   },
-};
-
-export const DEFAULT_THEME: FretboardTheme = {
-  id: 'rosewood',
-  name: 'Rosewood',
-  woodColor: 'bg-[#4a2c2a]',
-  fretColor: 'bg-[#e5e7eb]',
-  nutColor: 'bg-[#fef3c7]',
-  markerColor: 'bg-gray-400/60',
-  labelColor: 'text-cyan-400'
+  allFourths: {
+    name: 'All Fourths (EADGCF)',
+    strings: ['F4', 'C4', 'G3', 'D3', 'A2', 'E2'],
+  },
+  allFifths: {
+    name: 'All Fifths (CGDAEB)',
+    strings: ['B4', 'E4', 'A3', 'D3', 'G2', 'C2'],
+  },
 };
 
 export const INTERVAL_COLORS: Color[] = [
@@ -108,10 +105,7 @@ export const COLOR_PALETTE: Color[] = [
 
 // Helper to assign colors based on interval index
 const assignColors = (structure: Structure) => {
-    // Only assign colors if not already defined
-    if (structure.colors.length === 0) {
-        structure.colors = structure.intervals.map(i => INTERVAL_COLORS[i.interval % 12]);
-    }
+    structure.colors = structure.intervals.map(i => INTERVAL_COLORS[i.interval % 12]);
     return structure;
 };
 
@@ -120,7 +114,6 @@ const CHORDS_BASE: Record<string, Record<string, Structure>> = {
   'Triads & Foundational': {
     major: { name: 'Major Triad', intervals: [ { interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 7, name: '5' } ], colors: [] },
     minor: { name: 'Minor Triad', intervals: [ { interval: 0, name: 'R' }, { interval: 3, name: 'b3' }, { interval: 7, name: '5' } ], colors: [] },
-    major6: { name: 'Major 6', intervals: [ { interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 7, name: '5' }, { interval: 9, name: '6' } ], colors: [] },
     diminished: { name: 'Diminished Triad', intervals: [ { interval: 0, name: 'R' }, { interval: 3, name: 'b3' }, { interval: 6, name: 'b5' } ], colors: [] },
     augmented: { name: 'Augmented Triad', intervals: [ { interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 8, name: '#5' } ], colors: [] },
     sus2: { name: 'Sus2', intervals: [ { interval: 0, name: 'R' }, { interval: 2, name: '2' }, { interval: 7, name: '5' } ], colors: [] },
@@ -140,346 +133,13 @@ const CHORDS_BASE: Record<string, Record<string, Structure>> = {
     maj7sus2: { name: 'Major 7sus2', intervals: [{ interval: 0, name: 'R' }, { interval: 2, name: '2' }, { interval: 7, name: '5' }, { interval: 11, name: '7' }], colors: [] },
     maj7sus4: { name: 'Major 7sus4', intervals: [{ interval: 0, name: 'R' }, { interval: 5, name: '4' }, { interval: 7, name: '5' }, { interval: 11, name: '7' }], colors: [] },
   },
-  'Hexatonic/Triad Pair': {
-    i_ii_triad_pair: {
-      name: 'I + ii (Major + Minor)',
-      intervals: [0, 2, 4, 5, 7, 9].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R (0) - I Major
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 2 (2) - ii Minor
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 3 (4) - I Major
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4 (5) - ii Minor
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5 (7) - I Major
-        { bgColor: 'bg-red-500', textColor: 'text-white' }     // 6 (9) - ii Minor
-      ]
-    },
-    i6_iv6_pair: {
-      name: 'I6 + IV6 (Experimental)',
-      intervals: [0, 2, 4, 5, 7, 9].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-yellow-400', textColor: 'text-black' }, // R (0) - Overlap (C)
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 2 (2) - IV6 only (D)
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 3 (4) - I6 only (E)
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4 (5) - IV6 only (F)
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5 (7) - I6 only (G)
-        { bgColor: 'bg-yellow-400', textColor: 'text-black' }  // 6 (9) - Overlap (A)
-      ]
-    },
-  },
-  'Barry Harris System': {
-    sixth_diminished: {
-      name: 'Major 6th Diminished (Parent Scale)',
-      intervals: [0, 2, 4, 5, 7, 8, 9, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R (0) - Maj6
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 2 (2) - Dim7
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 3 (4) - Maj6
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4 (5) - Dim7
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5 (7) - Maj6
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b6 (8) - Dim7
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 6 (9) - Maj6
-        { bgColor: 'bg-red-500', textColor: 'text-white' }     // 7 (11) - Dim7
-      ]
-    },
-    dom7b5_diminished: {
-      name: 'Dominant 7♭5 Diminished',
-      intervals: [0, 2, 4, 5, 6, 8, 10, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R (0) - Dom7b5
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 2 (2) - Dim7
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 3 (4) - Dom7b5
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4 (5) - Dim7
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b5 (6) - Dom7b5
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b6 (8) - Dim7
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b7 (10) - Dom7b5
-        { bgColor: 'bg-red-500', textColor: 'text-white' }     // 7 (11) - Dim7
-      ]
-    },
-  },
-  'BH: Major Modes (Drop b6)': {
-    bh_ionian: {
-      name: 'Ionian (Major)',
-      intervals: [0, 2, 4, 5, 7, 9, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R - Maj6
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 2 - Dim7
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 3 - Maj6
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4 - Dim7
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5 - Maj6
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 6 - Maj6
-        { bgColor: 'bg-red-500', textColor: 'text-white' }     // 7 - Dim7
-      ]
-    },
-    bh_dorian: {
-      name: 'Dorian',
-      intervals: [0, 2, 3, 5, 7, 9, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 2
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b3
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 6
-        { bgColor: 'bg-red-500', textColor: 'text-white' }     // b7
-      ]
-    },
-    bh_phrygian: {
-      name: 'Phrygian',
-      intervals: [0, 1, 3, 5, 7, 8, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b2
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b3
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b6
-        { bgColor: 'bg-blue-500', textColor: 'text-white' }    // b7
-      ]
-    },
-    bh_lydian: {
-      name: 'Lydian',
-      intervals: [0, 2, 4, 6, 7, 9, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 2
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 3
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // #4
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 6
-        { bgColor: 'bg-red-500', textColor: 'text-white' }     // 7
-      ]
-    },
-    bh_mixolydian: {
-      name: 'Mixolydian',
-      intervals: [0, 2, 4, 5, 7, 9, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 2
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 3
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 6
-        { bgColor: 'bg-red-500', textColor: 'text-white' }     // b7
-      ]
-    },
-    bh_aeolian: {
-      name: 'Aeolian (Natural Minor)',
-      intervals: [0, 2, 3, 5, 7, 8, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 2
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b3
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b6
-        { bgColor: 'bg-blue-500', textColor: 'text-white' }    // b7
-      ]
-    },
-    bh_locrian: {
-      name: 'Locrian',
-      intervals: [0, 1, 3, 5, 6, 8, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b2
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b3
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b5
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b6
-        { bgColor: 'bg-blue-500', textColor: 'text-white' }    // b7
-      ]
-    },
-  },
-  'BH: Harmonic Minor Modes (Drop 5)': {
-    bh_harmonic_minor: {
-      name: 'Harmonic Minor',
-      intervals: [0, 2, 3, 5, 7, 8, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 2
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b3
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b6
-        { bgColor: 'bg-red-500', textColor: 'text-white' }     // 7
-      ]
-    },
-    bh_locrian_nat6: {
-      name: 'Locrian ♮6',
-      intervals: [0, 1, 3, 5, 6, 9, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b2
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b3
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b5
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 6
-        { bgColor: 'bg-red-500', textColor: 'text-white' }     // b7
-      ]
-    },
-    bh_ionian_aug: {
-      name: 'Ionian #5 (Augmented Major)',
-      intervals: [0, 2, 4, 5, 8, 9, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 2
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 3
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // #5
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 6
-        { bgColor: 'bg-red-500', textColor: 'text-white' }     // 7
-      ]
-    },
-    bh_dorian_sharp4: {
-      name: 'Dorian #4 (Romanian Minor)',
-      intervals: [0, 2, 3, 6, 7, 9, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 2
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b3
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // #4
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 6
-        { bgColor: 'bg-red-500', textColor: 'text-white' }     // b7
-      ]
-    },
-    bh_phrygian_dominant: {
-      name: 'Phrygian Dominant',
-      intervals: [0, 1, 4, 5, 7, 8, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b2
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 3
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b6
-        { bgColor: 'bg-blue-500', textColor: 'text-white' }    // b7
-      ]
-    },
-    bh_lydian_sharp2: {
-      name: 'Lydian #2',
-      intervals: [0, 3, 4, 6, 7, 9, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // #2
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 3
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // #4
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 6
-        { bgColor: 'bg-red-500', textColor: 'text-white' }     // 7
-      ]
-    },
-    bh_super_locrian_dim7: {
-      name: 'Super Locrian bb7',
-      intervals: [0, 1, 3, 4, 6, 8, 9].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b2
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b3
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b4
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b5
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b6
-        { bgColor: 'bg-blue-500', textColor: 'text-white' }    // bb7
-      ]
-    },
-  },
-  'BH: Harmonic Major Modes (Drop 6)': {
-    bh_harmonic_major: {
-      name: 'Harmonic Major (Ionian b6)',
-      intervals: [0, 2, 4, 5, 7, 8, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 2
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 3
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b6
-        { bgColor: 'bg-red-500', textColor: 'text-white' }     // 7
-      ]
-    },
-    bh_dorian_flat5: {
-      name: 'Dorian b5',
-      intervals: [0, 2, 3, 5, 6, 9, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 2
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b3
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b5
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 6
-        { bgColor: 'bg-red-500', textColor: 'text-white' }     // b7
-      ]
-    },
-    bh_phrygian_flat4: {
-      name: 'Phrygian b4',
-      intervals: [0, 1, 3, 4, 7, 8, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b2
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b3
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b4
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b6
-        { bgColor: 'bg-blue-500', textColor: 'text-white' }    // b7
-      ]
-    },
-    bh_lydian_dim: {
-      name: 'Lydian b3 (Lydian Diminished)',
-      intervals: [0, 2, 3, 6, 7, 9, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 2
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b3
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // #4
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 6
-        { bgColor: 'bg-red-500', textColor: 'text-white' }     // 7
-      ]
-    },
-    bh_mixolydian_flat2: {
-      name: 'Mixolydian b2',
-      intervals: [0, 1, 4, 5, 7, 9, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b2
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 3
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 6
-        { bgColor: 'bg-red-500', textColor: 'text-white' }     // b7
-      ]
-    },
-    bh_lydian_aug_sharp2: {
-      name: 'Lydian Augmented #2',
-      intervals: [0, 3, 4, 6, 8, 9, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // #2
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 3
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // #4
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // #5
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 6
-        { bgColor: 'bg-red-500', textColor: 'text-white' }     // 7
-      ]
-    },
-    bh_locrian_dim7: {
-      name: 'Locrian bb7',
-      intervals: [0, 1, 3, 5, 6, 8, 9].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
-      colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b2
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b3
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b5
-        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b6
-        { bgColor: 'bg-blue-500', textColor: 'text-white' }    // bb7
-      ]
-    },
-  },
-  'Other Scales': {
-    messiaen_mode_3: { name: 'Messiaen Mode 3', intervals: [0, 2, 3, 4, 6, 7, 8, 10, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })), colors: [] },
+  'Scales & Modes': {
+    major_scale: { name: 'Major Scale (Ionian)', intervals: [0, 2, 4, 5, 7, 9, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })), colors: [] },
+    minor_scale: { name: 'Natural Minor (Aeolian)', intervals: [0, 2, 3, 5, 7, 8, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })), colors: [] },
     major_pentatonic: { name: 'Major Pentatonic', intervals: [0, 2, 4, 7, 9].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })), colors: [] },
     minor_pentatonic: { name: 'Minor Pentatonic', intervals: [0, 3, 5, 7, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })), colors: [] },
     blues: { name: 'Blues Scale', intervals: [0, 3, 5, 6, 7, 10].map(i => ({ interval: i, name: i === 6 ? 'b5' : INTERVAL_NAMES[i] })), colors: [] },
+    hexatonic_no4: { name: 'Hexatonic (no 4th)', intervals: [0, 2, 4, 7, 9, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })), colors: [] },
   }
 };
 
@@ -495,18 +155,67 @@ const FIVE_NOTE_CHORDS: Record<string, Record<string, Structure>> = {
     minmaj9: { name: 'Minor-Major 9', intervals: [{ interval: 0, name: 'R' }, { interval: 3, name: 'b3' }, { interval: 7, name: '5' }, { interval: 11, name: '7' }, { interval: 14, name: '9' }], colors: [] },
     halfdim9: { name: 'Half-Diminished 9', intervals: [{ interval: 0, name: 'R' }, { interval: 3, name: 'b3' }, { interval: 6, name: 'b5' }, { interval: 10, name: 'b7' }, { interval: 14, name: '9' }], colors: [] },
   },
+  '5-Note: 11th/13th Extensions': {
+    min11: { name: 'Minor 11', intervals: [{ interval: 0, name: 'R' }, { interval: 3, name: 'b3' }, { interval: 7, name: '5' }, { interval: 10, name: 'b7' }, { interval: 17, name: '11' }], colors: [] },
+    dom11: { name: 'Dominant 11', intervals: [{ interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 7, name: '5' }, { interval: 10, name: 'b7' }, { interval: 17, name: '11' }], colors: [] },
+    maj11: { name: 'Major 11', intervals: [{ interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 7, name: '5' }, { interval: 11, name: '7' }, { interval: 17, name: '11' }], colors: [] },
+    dom13: { name: 'Dominant 13', intervals: [{ interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 10, name: 'b7' }, { interval: 17, name: '11' }, { interval: 21, name: '13' }], colors: [] },
+    min13: { name: 'Minor 13', intervals: [{ interval: 0, name: 'R' }, { interval: 3, name: 'b3' }, { interval: 10, name: 'b7' }, { interval: 17, name: '11' }, { interval: 21, name: '13' }], colors: [] },
+    dom7add9add13: { name: 'Dominant 7(add 9, 13)', intervals: [{ interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 10, name: 'b7' }, { interval: 14, name: '9' }, { interval: 21, name: '13' }], colors: [] },
+  },
+  '5-Note: Altered 5th': {
+    dom9sharp5: { name: 'Dominant 9(#5)', intervals: [{ interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 8, name: '#5' }, { interval: 10, name: 'b7' }, { interval: 14, name: '9' }], colors: [] },
+    dom9b5: { name: 'Dominant 9(b5)', intervals: [{ interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 6, name: 'b5' }, { interval: 10, name: 'b7' }, { interval: 14, name: '9' }], colors: [] },
+    maj9sharp5: { name: 'Major 9(#5)', intervals: [{ interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 8, name: '#5' }, { interval: 11, name: '7' }, { interval: 14, name: '9' }], colors: [] },
+    maj9b5: { name: 'Major 9(b5)', intervals: [{ interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 6, name: 'b5' }, { interval: 11, name: '7' }, { interval: 14, name: '9' }], colors: [] },
+    min9sharp5: { name: 'Minor 9(#5)', intervals: [{ interval: 0, name: 'R' }, { interval: 3, name: 'b3' }, { interval: 8, name: '#5' }, { interval: 10, name: 'b7' }, { interval: 14, name: '9' }], colors: [] },
+  },
+  '5-Note: Double Alterations': {
+    dom7b9b5: { name: 'Dominant 7(b9,b5)', intervals: [{ interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 6, name: 'b5' }, { interval: 10, name: 'b7' }, { interval: 13, name: 'b9' }], colors: [] },
+    dom7b9sharp5: { name: 'Dominant 7(b9,#5)', intervals: [{ interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 8, name: '#5' }, { interval: 10, name: 'b7' }, { interval: 13, name: 'b9' }], colors: [] },
+    dom7sharp9sharp5: { name: 'Dominant 7(#9,#5)', intervals: [{ interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 8, name: '#5' }, { interval: 10, name: 'b7' }, { interval: 15, name: '#9' }], colors: [] },
+    dom7sharp9b5: { name: 'Dominant 7(#9,b5)', intervals: [{ interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 6, name: 'b5' }, { interval: 10, name: 'b7' }, { interval: 15, name: '#9' }], colors: [] },
+    maj7sharp5sharp9: { name: 'Major 7(#5,#9)', intervals: [{ interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 8, name: '#5' }, { interval: 11, name: '7' }, { interval: 15, name: '#9' }], colors: [] },
+    dom7sharp9sharp11: { name: 'Dominant 7(#9,#11)', intervals: [{ interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 10, name: 'b7' }, { interval: 15, name: '#9' }, { interval: 18, name: '#11' }], colors: [] },
+  },
   '5-Note: Suspended': {
-    dom7sus4add9: { 
-      name: '7sus4(add 9)', 
-      intervals: [
-        { interval: 0, name: 'R' }, 
-        { interval: 5, name: '4' }, 
-        { interval: 7, name: '5' }, 
-        { interval: 10, name: 'b7' }, 
-        { interval: 14, name: '9' }
-      ], 
-      colors: [] 
-    },
+    dom9sus4: { name: 'Dominant 9sus4', intervals: [{ interval: 0, name: 'R' }, { interval: 5, name: '4' }, { interval: 7, name: '5' }, { interval: 10, name: 'b7' }, { interval: 14, name: '9' }], colors: [] },
+    maj9sus4: { name: 'Major 9sus4', intervals: [{ interval: 0, name: 'R' }, { interval: 5, name: '4' }, { interval: 7, name: '5' }, { interval: 11, name: '7' }, { interval: 14, name: '9' }], colors: [] },
+  },
+  '5-Note: Hybrid/Polychord': {
+    maj9_3_4: { name: 'Major 9(3,4)', intervals: [{ interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 5, name: '4' }, { interval: 11, name: '7' }, { interval: 14, name: '9' }], colors: [] },
+    maj9sus6sus: { name: 'Major 9sus/6sus', intervals: [{ interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 5, name: '4' }, { interval: 9, name: '6' }, { interval: 14, name: '9' }], colors: [] },
+    g9sus_ext: { name: 'G9sus extended', intervals: [{ interval: 0, name: 'R' }, { interval: 2, name: '2' }, { interval: 4, name: '3' }, { interval: 7, name: '5' }, { interval: 10, name: 'b7' }], colors: [] },
+  },
+  '5-Note: Exotic': {
+    mystic: { name: 'Mystic Chord *', intervals: [{ interval: 0, name: 'R' }, { interval: 6, name: '#4' }, { interval: 10, name: 'b7' }, { interval: 14, name: '9' }, { interval: 21, name: '13' }], colors: [] },
+    maj7b9: { name: 'Major 7(b9)', intervals: [{ interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 7, name: '5' }, { interval: 11, name: '7' }, { interval: 13, name: 'b9' }], colors: [] },
+  },
+  '5-Note: Clusters': {
+    whole_tone_penta: { name: 'Whole Tone Pentachord', intervals: [{ interval: 0, name: 'R' }, { interval: 2, name: '2' }, { interval: 4, name: '3' }, { interval: 6, name: '#4' }, { interval: 8, name: '#5' }], colors: [] },
+    semitone_cluster: { name: 'Semitone Cluster', intervals: [{ interval: 0, name: 'R' }, { interval: 1, name: 'b2' }, { interval: 3, name: 'b3' }, { interval: 5, name: '4' }, { interval: 6, name: 'b5' }], colors: [] },
+  },
+  '5-Note: Augmented Scale Subsets': {
+    augSub1: { name: 'Major 7(#5,#9)', intervals: [{ interval: 0, name: 'R' }, { interval: 3, name: '#9' }, { interval: 4, name: '3' }, { interval: 7, name: '5' }, { interval: 8, name: 'b13' }], colors: [] },
+    augSub2: { name: 'Major 7(add 3)', intervals: [{ interval: 0, name: 'R' }, { interval: 3, name: '#9' }, { interval: 4, name: '3' }, { interval: 7, name: '5' }, { interval: 11, name: '7' }], colors: [] },
+    augSub4: { name: 'Major 7(b13, #9)', intervals: [{ interval: 0, name: 'R' }, { interval: 3, name: '#9' }, { interval: 7, name: '5' }, { interval: 8, name: 'b13' }, { interval: 11, name: '7' }], colors: [] },
+    augSub5: { name: 'Major 7(b13)', intervals: [{ interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 7, name: '5' }, { interval: 8, name: 'b13' }, { interval: 11, name: '7' }], colors: [] },
+  },
+  '5-Note: Mystic Mode Subsets': {
+    mysticSub1: { name: 'Major 6/9#11 (no 5th)', intervals: [{ interval: 0, name: 'R' }, { interval: 2, name: '9' }, { interval: 4, name: '3' }, { interval: 6, name: '#11' }, { interval: 9, name: '13' }], colors: [] },
+    mysticSub2: { name: 'Major 9#11 (no 5th)', intervals: [{ interval: 0, name: 'R' }, { interval: 2, name: '9' }, { interval: 4, name: '3' }, { interval: 6, name: '#11' }, { interval: 11, name: '7' }], colors: [] },
+    mysticSub3: { name: 'Major 13 (no 5, no 11)', intervals: [{ interval: 0, name: 'R' }, { interval: 2, name: '9' }, { interval: 4, name: '3' }, { interval: 9, name: '13' }, { interval: 11, name: '7' }], colors: [] },
+    mysticSub4: { name: 'Major 7(6/9)#11sus2', intervals: [{ interval: 0, name: 'R' }, { interval: 2, name: '9' }, { interval: 6, name: '#11' }, { interval: 9, name: '13' }, { interval: 11, name: '7' }], colors: [] },
+    mysticSub5: { name: 'Major 13#11 (no 5, no 9)', intervals: [{ interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 6, name: '#11' }, { interval: 9, name: '13' }, { interval: 11, name: '7' }], colors: [] },
+    mysticSub6: { name: 'Major 6/9 (Mystic Voicing)', intervals: [{ interval: 0, name: 'R' }, { interval: 2, name: '9' }, { interval: 4, name: '3' }, { interval: 7, name: '5' }, { interval: 9, name: '6' }], colors: [] },
+  },
+  '5-Note: Octatonic Hexachord Subsets': {
+    octSub1: { name: '7(b9,#11,13) (no 5, no 7)', intervals: [{ interval: 0, name: 'R' }, { interval: 1, name: 'b9' }, { interval: 4, name: '3' }, { interval: 6, name: '#11' }, { interval: 9, name: '13' }], colors: [] },
+    octSub2: { name: 'Major 7(b9)#11 (no 5)', intervals: [{ interval: 0, name: 'R' }, { interval: 1, name: 'b9' }, { interval: 4, name: '3' }, { interval: 6, name: '#11' }, { interval: 11, name: '7' }], colors: [] },
+    octSub3: { name: 'Major 7(b9,13)', intervals: [{ interval: 0, name: 'R' }, { interval: 1, name: 'b9' }, { interval: 4, name: '3' }, { interval: 9, name: '13' }, { interval: 11, name: '7' }], colors: [] },
+    octSub4: { name: 'Major 7(b9,#11,13)sus', intervals: [{ interval: 0, name: 'R' }, { interval: 1, name: 'b9' }, { interval: 6, name: '#11' }, { interval: 9, name: '13' }, { interval: 11, name: '7' }], colors: [] },
+    octSub5: { name: 'Major 13#11 (Octatonic)', intervals: [{ interval: 0, name: 'R' }, { interval: 4, name: '3' }, { interval: 6, name: '#11' }, { interval: 9, name: '13' }, { interval: 11, name: '7' }], colors: [] },
+    octSub6: { name: '9sus (no 7)', intervals: [{ interval: 0, name: 'R' }, { interval: 2, name: '2' }, { interval: 5, name: '4' }, { interval: 7, name: '5' }, { interval: 9, name: '6' }], colors: [] },
   }
 };
 
@@ -520,3 +229,81 @@ Object.values(CHORDS_BASE).forEach(category => Object.values(category).forEach(a
 Object.values(FIVE_NOTE_CHORDS).forEach(category => Object.values(category).forEach(assignColors));
 
 export const CATEGORIZED_STRUCTURES = { ...CHORDS_BASE, ...FIVE_NOTE_CHORDS };
+
+// Visualization patterns for hexatonic scale (1, 2, 3, 5, 6, 7)
+// Each pattern defines two groups of intervals with distinct colors
+export interface VisualizationPattern {
+  id: string;
+  name: string;
+  description: string;
+  groupA: {
+    intervals: number[];  // semitone intervals
+    color: Color;
+  };
+  groupB: {
+    intervals: number[];
+    color: Color;
+  };
+}
+
+export const HEXATONIC_PATTERNS: VisualizationPattern[] = [
+  {
+    id: 'default',
+    name: 'Default (Interval Colors)',
+    description: 'Standard interval-based coloring',
+    groupA: { intervals: [], color: { bgColor: '', textColor: '' } },
+    groupB: { intervals: [], color: { bgColor: '', textColor: '' } },
+  },
+  {
+    id: 'triad_pair_v_vi',
+    name: 'V + vi Triad Pair',
+    description: 'G major (5,7,2) + A minor (6,1,3)',
+    groupA: {
+      intervals: [7, 11, 2],  // 5, 7, 2 (G major: G-B-D)
+      color: { bgColor: 'bg-blue-500', textColor: 'text-white' },
+    },
+    groupB: {
+      intervals: [9, 0, 4],   // 6, 1, 3 (A minor: A-C-E)
+      color: { bgColor: 'bg-red-500', textColor: 'text-white' },
+    },
+  },
+  {
+    id: 'cluster_1_2_3__5_6_7',
+    name: 'Cluster {1,2,3} + {5,6,7}',
+    description: 'Adjacent scale tone clusters',
+    groupA: {
+      intervals: [0, 2, 4],   // 1, 2, 3
+      color: { bgColor: 'bg-emerald-500', textColor: 'text-white' },
+    },
+    groupB: {
+      intervals: [7, 9, 11],  // 5, 6, 7
+      color: { bgColor: 'bg-orange-500', textColor: 'text-white' },
+    },
+  },
+  {
+    id: 'cluster_2_3_5__6_7_1',
+    name: 'Cluster {2,3,5} + {6,7,1}',
+    description: 'Rotated cluster pair',
+    groupA: {
+      intervals: [2, 4, 7],   // 2, 3, 5
+      color: { bgColor: 'bg-cyan-500', textColor: 'text-white' },
+    },
+    groupB: {
+      intervals: [9, 11, 0],  // 6, 7, 1
+      color: { bgColor: 'bg-fuchsia-500', textColor: 'text-white' },
+    },
+  },
+  {
+    id: 'cluster_3_5_6__7_1_2',
+    name: 'Cluster {3,5,6} + {7,1,2}',
+    description: 'Rotated cluster pair',
+    groupA: {
+      intervals: [4, 7, 9],   // 3, 5, 6
+      color: { bgColor: 'bg-amber-400', textColor: 'text-black' },
+    },
+    groupB: {
+      intervals: [11, 0, 2],  // 7, 1, 2
+      color: { bgColor: 'bg-violet-500', textColor: 'text-white' },
+    },
+  },
+];

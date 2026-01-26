@@ -1,3 +1,4 @@
+
 export interface Tuning {
   name: string;
   strings: string[];
@@ -21,7 +22,7 @@ export interface HighlightedNote {
   ringClassName?: string;
 }
 
-export type StructureLabelType = 'interval' | 'noteName' | 'sargam' | 'degree';
+export type StructureLabelType = 'interval' | 'noteName' | 'sargam';
 
 export interface Structure {
   name: string;
@@ -41,17 +42,9 @@ export interface StringGroup {
   fretRange: { start: number; end: number };
 }
 
-export type Instrument = 'sine' | 'square' | 'sawtooth' | 'triangle' | 'pluck';
+export type Instrument = 'sine' | 'square' | 'sawtooth' | 'triangle';
 
-export interface FretboardTheme {
-  id: string;
-  name: string;
-  woodColor: string;
-  fretColor: string;
-  nutColor: string;
-  markerColor: string;
-  labelColor: string;
-}
+export type HexatonicPatternId = 'default' | 'triad_pair_v_vi' | 'cluster_1_2_3__5_6_7' | 'cluster_2_3_5__6_7_1' | 'cluster_3_5_6__7_1_2';
 
 export interface SavedPattern {
   id: string;
@@ -59,17 +52,4 @@ export interface SavedPattern {
   manualNotes: Record<string, { color: Color, ring: RingColor }>;
   rootNote: string;
   tuning: Tuning;
-}
-
-export interface FretboardInstance {
-  id: string;
-  name: string;
-  rootNote: string;
-  globalStructure: StructureKey;
-  visibleIntervals: Set<number>;
-  manualNotes: Record<string, { color: Color, ring: RingColor }>;
-  structureLabelType: StructureLabelType;
-  isAdvancedMode: boolean;
-  stringGroups: StringGroup[];
-  activeGroupId: string | null;
 }

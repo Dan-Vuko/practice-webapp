@@ -1,20 +1,29 @@
 
 import React, { useState, useMemo } from 'react';
-import type { Tuning, Color, RingColor, SavedPattern, Structure, StringGroup, Instrument, FretboardInstance } from '../types';
-import { TUNINGS, KEYS, COLOR_PALETTE, RING_COLOR_PALETTE, STRUCTURES, INTERVAL_NAMES, ROMAN_DEGREES, CATEGORIZED_STRUCTURES, FRET_COUNT } from '../constants';
+import type { Tuning, Color, RingColor, StructureLabelType, StructureKey, SavedPattern, Structure, StringGroup, Instrument, HexatonicPatternId } from '../types';
+import { TUNINGS, KEYS, COLOR_PALETTE, RING_COLOR_PALETTE, STRUCTURES, INTERVAL_NAMES, HEXATONIC_PATTERNS } from '../constants';
+import { InfoIcon } from './icons/InfoIcon';
 import { ChevronIcon } from './icons/ChevronIcon';
 import { TrashIcon } from './icons/TrashIcon';
 import { SpeakerIcon } from './icons/SpeakerIcon';
 
 interface ControlsProps {
-  activeFretboard: FretboardInstance;
-  updateActiveFretboard: (updates: Partial<FretboardInstance>) => void;
   tuning: Tuning;
   setTuning: (tuning: Tuning) => void;
+  rootNote: string;
+  setRootNote: (note: string) => void;
+  selectedStructure: StructureKey;
+  setSelectedStructure: (key: StructureKey) => void;
+  visibleIntervals: Set<number>;
+  toggleIntervalVisibility: (interval: number) => void;
+  setAllIntervalsVisibility: (visible: boolean) => void;
+  structureLabelType: StructureLabelType;
+  setStructureLabelType: (type: StructureLabelType) => void;
   currentColor: Color;
   setCurrentColor: (color: Color) => void;
   currentRing: RingColor;
   setCurrentRing: (ring: RingColor) => void;
+  resetManualNotes: () => void;
   savedPatterns: SavedPattern[];
   onSavePattern: (name: string) => void;
   onLoadPattern: (id: string) => void;
@@ -23,318 +32,527 @@ interface ControlsProps {
   onSaveCustomStructure: (name: string) => void;
   onDeleteCustomStructure: (id: string) => void;
   detectedStructureName: string | null;
+  isAdvancedMode: boolean;
+  setIsAdvancedMode: (value: boolean) => void;
+  stringGroups: StringGroup[];
+  activeGroupId: string | null;
+  setActiveGroupId: (id: string) => void;
+  addGroup: () => void;
+  deleteGroup: (id: string) => void;
   updateGroup: (id: string, newProps: Partial<StringGroup>) => void;
+  toggleStringInGroup: (groupId: string, stringIndex: number) => void;
+  setAllStringsForGroup: (groupId: string, assign: boolean) => void;
   isSoundEnabled: boolean;
   setIsSoundEnabled: (value: boolean) => void;
   instrument: Instrument;
   setInstrument: (inst: Instrument) => void;
   onExport: () => void;
-  onStrum: () => void;
+  hexatonicPattern: HexatonicPatternId;
+  setHexatonicPattern: (pattern: HexatonicPatternId) => void;
 }
 
 const CollapsibleSection: React.FC<{ title: string; isOpen: boolean; onToggle: () => void; children: React.ReactNode }> = ({ title, isOpen, onToggle, children }) => (
-  <div className="bg-gray-700/30 rounded-xl transition-all duration-300 border border-gray-700/50 overflow-hidden">
+  <div className="bg-gray-700/50 rounded-lg transition-all duration-300">
     <button
       onClick={onToggle}
-      className="w-full flex justify-between items-center p-3 text-left font-bold text-gray-300 hover:text-cyan-400 hover:bg-gray-700/50 transition-all"
+      className="w-full flex justify-between items-center p-4 text-left font-semibold text-cyan-400 hover:bg-gray-700/80 rounded-t-lg"
+      aria-expanded={isOpen}
     >
-      <span className="text-xs tracking-wide uppercase">{title}</span>
-      <ChevronIcon className={`w-4 h-4 transition-transform duration-300 ${isOpen ? '' : '-rotate-90'}`} />
+      <h3>{title}</h3>
+      <ChevronIcon className={`w-5 h-5 transition-transform duration-300 ${isOpen ? '' : '-rotate-90'}`} />
     </button>
     {isOpen && (
-      <div className="p-3 border-t border-gray-700/50 bg-gray-800/20">
+      <div className="p-4 border-t border-gray-600/50">
         {children}
       </div>
     )}
   </div>
 );
 
-const Controls: React.FC<ControlsProps> = (props) => {
+const Controls: React.FC<ControlsProps> = ({
+  tuning,
+  setTuning,
+  rootNote,
+  setRootNote,
+  selectedStructure,
+  setSelectedStructure,
+  visibleIntervals,
+  toggleIntervalVisibility,
+  setAllIntervalsVisibility,
+  structureLabelType,
+  setStructureLabelType,
+  currentColor,
+  setCurrentColor,
+  currentRing,
+  setCurrentRing,
+  resetManualNotes,
+  savedPatterns,
+  onSavePattern,
+  onLoadPattern,
+  onDeletePattern,
+  customStructures,
+  onSaveCustomStructure,
+  onDeleteCustomStructure,
+  detectedStructureName,
+  isAdvancedMode,
+  setIsAdvancedMode,
+  stringGroups,
+  activeGroupId,
+  setActiveGroupId,
+  addGroup,
+  deleteGroup,
+  updateGroup,
+  toggleStringInGroup,
+  setAllStringsForGroup,
+  isSoundEnabled,
+  setIsSoundEnabled,
+  instrument,
+  setInstrument,
+  onExport,
+  hexatonicPattern,
+  setHexatonicPattern
+}) => {
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     setup: true,
     structure: true,
-    display: false,
-    manual: false,
-    advanced: false,
-    saved: false,
+    display: true,
+    manual: true,
+    saved: true,
+    customStructures: true,
   });
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [newPatternName, setNewPatternName] = useState('');
   const [isSaveStructureModalOpen, setIsSaveStructureModalOpen] = useState(false);
   const [newStructureName, setNewStructureName] = useState('');
 
-  const allStructures = useMemo(() => ({ ...STRUCTURES, ...props.customStructures }), [props.customStructures]);
-  const currentStructure = allStructures[props.activeFretboard.globalStructure];
+  const allStructures = useMemo(() => ({ ...STRUCTURES, ...customStructures }), [customStructures]);
+  const currentStructure = allStructures[selectedStructure];
+  
   const structureIntervals = useMemo(() => {
     if (!currentStructure) return new Set<number>();
     return new Set(currentStructure.intervals.map(i => i.interval % 12));
-  }, [currentStructure]);
+  }, [selectedStructure, allStructures]);
 
-  const visibleIntervals = props.activeFretboard.isAdvancedMode
-    ? (props.activeFretboard.stringGroups.find(g => g.id === props.activeFretboard.activeGroupId)?.visibleIntervals ?? new Set())
-    : props.activeFretboard.visibleIntervals;
+  // Fix: Explicitly cast Object.entries to ensure 't' is recognized as Tuning type to fix 'unknown' property access errors.
+  const tuningKey = useMemo(() => {
+    const entries = Object.entries(TUNINGS) as [string, Tuning][];
+    const match = entries.find(([, t]) => t.name === tuning.name);
+    return match ? match[0] : Object.keys(TUNINGS)[0];
+  }, [tuning.name]);
 
-  const toggleSection = (section: string) => setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
+  const toggleSection = (section: string) => {
+    setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
-  const toggleIntervalVisibility = (interval: number) => {
-    if (props.activeFretboard.isAdvancedMode && props.activeFretboard.activeGroupId) {
-      const newGroups = props.activeFretboard.stringGroups.map(g => {
-        if (g.id === props.activeFretboard.activeGroupId) {
-          const newInts = new Set(g.visibleIntervals);
-          if (newInts.has(interval)) newInts.delete(interval);
-          else newInts.add(interval);
-          return { ...g, visibleIntervals: newInts };
-        }
-        return g;
-      });
-      props.updateActiveFretboard({ stringGroups: newGroups });
-    } else {
-      const newSet = new Set(props.activeFretboard.visibleIntervals);
-      if (newSet.has(interval)) newSet.delete(interval);
-      else newSet.add(interval);
-      props.updateActiveFretboard({ visibleIntervals: newSet });
+  const handleSavePattern = () => {
+    if (newPatternName.trim()) {
+      onSavePattern(newPatternName.trim());
+      setNewPatternName('');
+      setIsSaveModalOpen(false);
     }
   };
 
-  const setAllIntervalsVisibility = (visible: boolean) => {
-    const newSet = visible ? new Set(Array.from({ length: 12 }, (_, i) => i)) : new Set<number>();
-    if (props.activeFretboard.isAdvancedMode && props.activeFretboard.activeGroupId) {
-      const newGroups = props.activeFretboard.stringGroups.map(g =>
-        g.id === props.activeFretboard.activeGroupId ? { ...g, visibleIntervals: newSet } : g
-      );
-      props.updateActiveFretboard({ stringGroups: newGroups });
-    } else props.updateActiveFretboard({ visibleIntervals: newSet });
+  const handleSaveStructure = () => {
+    if (newStructureName.trim()) {
+      onSaveCustomStructure(newStructureName.trim());
+      setNewStructureName('');
+      setIsSaveStructureModalOpen(false);
+    }
   };
-
-  // Fix: Explicitly type the find callback argument to [string, Tuning] and access via index to avoid 'unknown' property errors.
-  const currentTuningKey = useMemo(() => {
-    const entries = Object.entries(TUNINGS) as [string, Tuning][];
-    const match = entries.find((pair: [string, Tuning]) => pair[1].name === props.tuning.name);
-    return match ? match[0] : 'daead';
-  }, [props.tuning.name]);
+  
+  const labelOptions: { id: StructureLabelType, name: string }[] = [
+    { id: 'interval', name: 'Intervals' },
+    { id: 'noteName', name: 'Notes' },
+    { id: 'sargam', name: 'Sargam' },
+  ];
 
   return (
-    <div className="w-full lg:w-80 bg-gray-800/80 backdrop-blur-md p-4 rounded-2xl shadow-2xl flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-100px)] border border-gray-700 custom-scrollbar">
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-xl font-black text-cyan-400 uppercase tracking-tighter italic">FretMaster</h2>
-        <div className="flex gap-2">
-          {props.isSoundEnabled && (
-            <button
-              onClick={props.onStrum}
-              className="p-2 bg-gray-700 text-cyan-400 rounded-xl hover:bg-cyan-600 hover:text-white transition-all shadow-sm"
-              title="Strum Visualization"
-            >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
-            </button>
-          )}
-          <button
-            onClick={() => props.setIsSoundEnabled(!props.isSoundEnabled)}
-            className={`p-2 rounded-xl transition-all ${props.isSoundEnabled ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-500'}`}
-          >
-            <SpeakerIcon className="w-4 h-4" enabled={props.isSoundEnabled} />
-          </button>
-        </div>
-      </div>
-
-      {/* Active Fretboard Indicator */}
-      <div className="p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-xl">
-        <div className="text-xs text-gray-500 uppercase mb-1">Editing</div>
-        <div className="text-sm font-bold text-cyan-400">{props.activeFretboard.name}</div>
-      </div>
+    <div className="w-full lg:w-80 bg-gray-800 p-4 rounded-lg shadow-2xl flex flex-col gap-4 overflow-y-auto">
+      <h2 className="text-2xl font-bold text-center mb-2">Controls</h2>
       
-      <CollapsibleSection title="Setup" isOpen={openSections.setup} onToggle={() => toggleSection('setup')}>
+      <CollapsibleSection title="Fretboard Setup" isOpen={openSections.setup} onToggle={() => toggleSection('setup')}>
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Root</label>
-              <select
-                value={props.activeFretboard.rootNote}
-                onChange={(e) => props.updateActiveFretboard({ rootNote: e.target.value })}
-                className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white"
-              >
-                {KEYS.map(key => <option key={key.value} value={key.value}>{key.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Tuning</label>
-              <select
-                value={currentTuningKey}
-                onChange={(e) => props.setTuning(TUNINGS[e.target.value as keyof typeof TUNINGS])}
-                className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white"
-              >
-                {/* Fix: Explicitly cast and type the Object.entries(TUNINGS) call to ensure 't' has property 'name'. */}
-                {(Object.entries(TUNINGS) as [string, Tuning][]).map(([key, t]: [string, Tuning]) => (
-                  <option key={key} value={key}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div>
+            <label htmlFor="key-select" className="block text-sm font-medium text-gray-300 mb-1">Root Note</label>
+            <select
+              id="key-select"
+              value={rootNote}
+              onChange={(e) => setRootNote(e.target.value)}
+              className="w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-cyan-500 focus:border-cyan-500"
+            >
+              {KEYS.map(key => (
+                <option key={key.value} value={key.value}>{key.name}</option>
+              ))}
+            </select>
           </div>
+          <div>
+            <label htmlFor="tuning-select" className="block text-sm font-medium text-gray-300 mb-1">Tuning</label>
+            <select
+              id="tuning-select"
+              value={tuningKey}
+              onChange={(e) => setTuning(TUNINGS[e.target.value as keyof typeof TUNINGS])}
+              className="w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-cyan-500 focus:border-cyan-500"
+            >
+              {/* Fix: Cast Object.entries(TUNINGS) to [string, Tuning][] to avoid unknown property errors when accessing .name. */}
+              {(Object.entries(TUNINGS) as [string, Tuning][]).map(([key, t]) => (
+                <option key={key} value={key}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sound Toggle */}
+          <div className="flex items-center justify-between pt-2 border-t border-gray-600">
+             <span className="text-sm font-medium text-gray-300">Sound</span>
+             <button
+               onClick={() => setIsSoundEnabled(!isSoundEnabled)}
+               className={`p-2 rounded-full transition-colors ${isSoundEnabled ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-400'}`}
+               title={isSoundEnabled ? "Mute Sound" : "Enable Sound"}
+             >
+               <SpeakerIcon className="w-5 h-5" enabled={isSoundEnabled} />
+             </button>
+          </div>
+          
+           {isSoundEnabled && (
+            <div>
+               <label className="block text-xs text-gray-400 mb-1">Instrument</label>
+               <select
+                  value={instrument}
+                  onChange={(e) => setInstrument(e.target.value as Instrument)}
+                  className="w-full bg-gray-900 border border-gray-600 rounded text-sm p-1.5 text-white"
+               >
+                  <option value="sine">Sine Wave</option>
+                  <option value="triangle">Triangle Wave</option>
+                  <option value="square">Square Wave</option>
+                  <option value="sawtooth">Sawtooth Wave</option>
+               </select>
+            </div>
+          )}
+
+           {/* Advanced Mode Toggle */}
+           <div className="flex items-center justify-between pt-2">
+            <span className="text-sm font-medium text-gray-300">Advanced Mode</span>
+             <button
+                role="switch"
+                aria-checked={isAdvancedMode}
+                onClick={() => setIsAdvancedMode(!isAdvancedMode)}
+                className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-cyan-500 ${isAdvancedMode ? 'bg-cyan-600' : 'bg-gray-600'}`}
+             >
+               <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ${isAdvancedMode ? 'translate-x-6' : 'translate-x-1'}`} />
+             </button>
+           </div>
         </div>
       </CollapsibleSection>
 
-      <CollapsibleSection title="Theory" isOpen={openSections.structure} onToggle={() => toggleSection('structure')}>
-        <div className="space-y-3">
+      <CollapsibleSection title="Structure Visualization" isOpen={openSections.structure} onToggle={() => toggleSection('structure')}>
+        <div className="space-y-4">
           <div>
-            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Visualization</label>
+            <label htmlFor="structure-select" className="block text-sm font-medium text-gray-300 mb-1">Chord/Scale Type</label>
             <select
-              value={props.activeFretboard.globalStructure}
-              onChange={(e) => props.updateActiveFretboard({ globalStructure: e.target.value })}
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white mb-2"
+              id="structure-select"
+              value={selectedStructure}
+              onChange={(e) => setSelectedStructure(e.target.value)}
+              className="w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-cyan-500 focus:border-cyan-500"
             >
-              {Object.entries(CATEGORIZED_STRUCTURES).map(([categoryName, categoryStructures]) => (
-                <optgroup key={categoryName} label={categoryName}>
-                  {Object.entries(categoryStructures).map(([key, structure]) => (
+              <optgroup label="Presets">
+                {Object.entries(STRUCTURES).map(([key, structure]: [string, Structure]) => (
+                  <option key={key} value={key}>{structure.name}</option>
+                ))}
+              </optgroup>
+              {Object.keys(customStructures).length > 0 && (
+                <optgroup label="Custom">
+                  {Object.entries(customStructures).map(([key, structure]: [string, Structure]) => (
                     <option key={key} value={key}>{structure.name}</option>
                   ))}
                 </optgroup>
-              ))}
-              {Object.keys(props.customStructures).length > 0 && (
-                <optgroup label="Custom">
-                  {Object.entries(props.customStructures).map(([key, structure]) => <option key={key} value={key}>{structure.name}</option>)}
-                </optgroup>
               )}
             </select>
-            {props.detectedStructureName && (
-              <div className="px-2 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded text-[10px] text-cyan-400 font-bold text-center animate-pulse">
-                DETECTED: {props.detectedStructureName}
-              </div>
-            )}
           </div>
 
-          <div className="grid grid-cols-4 gap-1">
-            {INTERVAL_NAMES.map((name, index) => {
-              const isChecked = visibleIntervals.has(index);
-              const isInStructure = structureIntervals.has(index);
-              return (
-                <button
+          {/* Hexatonic Visualization Pattern Selector */}
+          {selectedStructure === 'hexatonic_no4' && (
+            <div className="bg-gray-900/50 p-3 rounded-lg border border-cyan-900/50">
+              <label htmlFor="pattern-select" className="block text-sm font-medium text-cyan-300 mb-2">
+                Visualization Pattern
+              </label>
+              <select
+                id="pattern-select"
+                value={hexatonicPattern}
+                onChange={(e) => setHexatonicPattern(e.target.value as HexatonicPatternId)}
+                className="w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-cyan-500 focus:border-cyan-500"
+              >
+                {HEXATONIC_PATTERNS.map(pattern => (
+                  <option key={pattern.id} value={pattern.id}>{pattern.name}</option>
+                ))}
+              </select>
+              {hexatonicPattern !== 'default' && (
+                <div className="mt-2 flex items-center gap-2 text-xs">
+                  <span className="text-gray-400">Colors:</span>
+                  {(() => {
+                    const pattern = HEXATONIC_PATTERNS.find(p => p.id === hexatonicPattern);
+                    if (!pattern) return null;
+                    return (
+                      <>
+                        <span className={`px-2 py-0.5 rounded ${pattern.groupA.color.bgColor} ${pattern.groupA.color.textColor}`}>
+                          Group A
+                        </span>
+                        <span className={`px-2 py-0.5 rounded ${pattern.groupB.color.bgColor} ${pattern.groupB.color.textColor}`}>
+                          Group B
+                        </span>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+              <p className="text-xs text-gray-400 mt-2">
+                {HEXATONIC_PATTERNS.find(p => p.id === hexatonicPattern)?.description}
+              </p>
+            </div>
+          )}
+
+          {detectedStructureName && (
+             <div className="text-center bg-gray-900/50 p-2 rounded border border-cyan-900/50">
+                <span className="text-xs text-gray-400 block uppercase tracking-wider">Detected</span>
+                <span className="text-cyan-400 font-medium">{detectedStructureName}</span>
+             </div>
+          )}
+
+          <div>
+            <p className="text-sm text-gray-300 mb-2">Toggle intervals to display on the fretboard. Highlighted intervals belong to the selected structure.</p>
+            <div className={`grid grid-cols-3 gap-2`}>
+              {INTERVAL_NAMES.map((name: string, index) => {
+                const isChecked = visibleIntervals.has(index);
+                const isInStructure = structureIntervals.has(index);
+                return (
+                  <label 
+                    key={index} 
+                    className={`flex items-center space-x-2 p-1.5 rounded-md cursor-pointer transition-colors ${isChecked ? 'bg-gray-900' : 'bg-gray-700/60 hover:bg-gray-600/80'}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => toggleIntervalVisibility(index)}
+                      className="form-checkbox h-4 w-4 text-cyan-500 bg-gray-700 border-gray-600 rounded focus:ring-cyan-600 focus:ring-offset-0"
+                    />
+                    <span className={`text-sm font-medium ${isInStructure ? 'text-cyan-300' : 'text-gray-300'}`}>{name}</span>
+                  </label>
+                )
+              })}
+            </div>
+            <div className={`flex gap-2 mt-3`}>
+              <button onClick={() => setAllIntervalsVisibility(true)} className="flex-1 text-sm bg-gray-600 hover:bg-gray-500 text-white font-semibold py-1.5 px-3 rounded-md transition-colors">Select All</button>
+              <button onClick={() => setAllIntervalsVisibility(false)} className="flex-1 text-sm bg-gray-600 hover:bg-gray-500 text-white font-semibold py-1.5 px-3 rounded-md transition-colors">Deselect All</button>
+            </div>
+            <button 
+              onClick={() => setIsSaveStructureModalOpen(true)}
+              className="w-full text-sm bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-1.5 px-3 rounded-md transition-colors mt-3 disabled:bg-gray-500 disabled:cursor-not-allowed"
+              disabled={visibleIntervals.size === 0}
+            >
+              Save Current as Custom Structure
+            </button>
+          </div>
+          
+           <div className="pt-2 border-t border-gray-600/50">
+             <button
+               onClick={onExport}
+               className="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md transition-colors flex items-center justify-center gap-2"
+             >
+               Export Diagram
+             </button>
+           </div>
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Global Display Settings" isOpen={openSections.display} onToggle={() => toggleSection('display')}>
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Note Labels</label>
+          <div className="grid grid-cols-3 gap-1 rounded-md bg-gray-900 p-1">
+            {labelOptions.map(option => (
+              <button
+                key={option.id}
+                onClick={() => setStructureLabelType(option.id)}
+                className={`w-full text-center text-sm font-semibold rounded p-1.5 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-cyan-500 ${
+                  structureLabelType === option.id
+                    ? 'bg-cyan-600 text-white shadow'
+                    : 'bg-gray-900 hover:bg-gray-700'
+                }`}
+              >
+                {option.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Manual Note Highlighting" isOpen={openSections.manual} onToggle={() => toggleSection('manual')}>
+        <div className="flex items-start mb-3">
+          <p className="text-sm text-gray-300 flex-1">Click a fret to add/remove a note. Pick a color below to paint with.</p>
+          <div className="relative group ml-2">
+            <InfoIcon className="w-5 h-5 text-gray-400" />
+            <div className="absolute bottom-full mb-2 w-48 bg-gray-900 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 right-0 transform translate-x-1/2 -translate-y-1 z-10">
+              Manually added notes will override the structure visualization.
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-medium text-gray-300 mb-2">Fill Color</h4>
+          <div className="flex flex-wrap gap-3 justify-center">
+            {COLOR_PALETTE.map((color, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentColor(color)}
+                className={`w-8 h-8 rounded-full transition-transform duration-150 border-2 border-transparent ${color.bgColor} ${currentColor.bgColor === color.bgColor ? 'ring-2 ring-offset-2 ring-offset-gray-800 ring-white' : 'hover:scale-110'}`}
+                aria-label={`Select color ${color.bgColor.replace('bg-','')}`}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <h4 className="text-sm font-medium text-gray-300 mb-2">Ring Color</h4>
+          <div className="flex flex-wrap gap-3 justify-center">
+            {RING_COLOR_PALETTE.map((ring: RingColor, index) => (
+               <button
                   key={index}
-                  onClick={() => toggleIntervalVisibility(index)}
-                  className={`py-1.5 rounded-lg text-[10px] font-black border transition-all ${isChecked ? (isInStructure ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-gray-600 border-gray-500 text-white') : 'bg-gray-900 border-gray-700 text-gray-500'}`}
-                >
-                  {name}
-                </button>
-              );
-            })}
+                  onClick={() => setCurrentRing(ring)}
+                  className={`w-8 h-8 rounded-full transition-transform duration-150 flex items-center justify-center ${currentRing.name === ring.name ? 'ring-2 ring-offset-2 ring-offset-gray-800 ring-white' : 'hover:scale-110'}`}
+                  aria-label={`Select ring color ${ring.name}`}
+               >
+                 {ring.name === 'None' ? (
+                   <div className="w-full h-full rounded-full bg-gray-700 border-2 border-gray-500 flex items-center justify-center text-gray-400">
+                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                   </div>
+                 ) : (
+                   <div className={`w-full h-full rounded-full ${ring.swatchClassName}`} />
+                 )}
+               </button>
+            ))}
           </div>
-
-          <button 
-            onClick={() => setIsSaveStructureModalOpen(true)}
-            className="w-full text-[9px] uppercase font-black bg-cyan-600/10 text-cyan-400 border border-cyan-400/20 py-2 rounded-lg hover:bg-cyan-600/20 transition-all"
-            disabled={visibleIntervals.size === 0}
+        </div>
+        
+        <div className="flex gap-2 mt-6">
+          <button
+            onClick={resetManualNotes}
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
           >
-            Save as Custom Scale
+            Clear
+          </button>
+          <button
+            onClick={() => setIsSaveModalOpen(true)}
+            className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
+          >
+            Save Pattern
           </button>
         </div>
       </CollapsibleSection>
 
-      <CollapsibleSection title="Display" isOpen={openSections.display} onToggle={() => toggleSection('display')}>
-        <div className="space-y-3">
-          <div>
-            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Label Type</label>
-            <select
-              value={props.activeFretboard.structureLabelType}
-              onChange={(e) => props.updateActiveFretboard({ structureLabelType: e.target.value as 'interval' | 'noteName' | 'sargam' | 'degree' })}
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white"
-            >
-              <option value="interval">Intervals (R, 2, 3, etc.)</option>
-              <option value="noteName">Note Names (C, D, E, etc.)</option>
-              <option value="sargam">Sargam (S, R, G, etc.)</option>
-              <option value="degree">Degrees (I, II, III, etc.)</option>
-            </select>
-          </div>
-        </div>
-      </CollapsibleSection>
-
-      <CollapsibleSection title="Advanced: Groups" isOpen={openSections.advanced} onToggle={() => toggleSection('advanced')}>
-        <div className="space-y-3">
-           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Group Mode</span>
-            <button
-              onClick={() => props.updateActiveFretboard({ isAdvancedMode: !props.activeFretboard.isAdvancedMode })}
-              className={`relative inline-flex items-center h-4 rounded-full w-8 transition-all ${props.activeFretboard.isAdvancedMode ? 'bg-cyan-600' : 'bg-gray-700'}`}
-            >
-              <span className={`inline-block w-2.5 h-2.5 transform bg-white rounded-full transition-transform ${props.activeFretboard.isAdvancedMode ? 'translate-x-4.5' : 'translate-x-1'}`} />
-            </button>
-          </div>
-          {props.activeFretboard.isAdvancedMode && (
-            <div className="space-y-2">
-              <button onClick={() => {
-                const newGroup: StringGroup = {
-                  id: `g_${Date.now()}`,
-                  name: `Group ${props.activeFretboard.stringGroups.length + 1}`,
-                  strings: [],
-                  rootNote: props.activeFretboard.rootNote,
-                  structureKey: props.activeFretboard.globalStructure,
-                  visibleIntervals: new Set([0, 4, 7]),
-                  fretRange: { start: 0, end: FRET_COUNT }
-                };
-                props.updateActiveFretboard({
-                  stringGroups: [...props.activeFretboard.stringGroups, newGroup],
-                  activeGroupId: newGroup.id
-                });
-              }} className="w-full py-1.5 bg-gray-700 text-white text-[10px] rounded-lg border border-gray-600 font-bold uppercase hover:bg-gray-600">+ New Group</button>
-              <div className="max-h-32 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
-                {props.activeFretboard.stringGroups.map((g: StringGroup) => (
-                  <button
-                    key={g.id}
-                    onClick={() => props.updateActiveFretboard({ activeGroupId: g.id })}
-                    className={`w-full flex items-center justify-between p-2 rounded-lg text-[10px] border transition-all ${props.activeFretboard.activeGroupId === g.id ? 'bg-cyan-900/30 border-cyan-500 text-white' : 'bg-gray-900 border-gray-700 text-gray-500'}`}
-                  >
-                    <span className="truncate">{g.name}</span>
-                    <div onClick={(e) => {
-                      e.stopPropagation();
-                      props.updateActiveFretboard({
-                        stringGroups: props.activeFretboard.stringGroups.filter(sg => sg.id !== g.id)
-                      });
-                    }} className="hover:text-red-400"><TrashIcon className="w-3 h-3" /></div>
-                  </button>
-                ))}
+      <CollapsibleSection title="Saved Patterns" isOpen={openSections.saved} onToggle={() => toggleSection('saved')}>
+        <div className="space-y-2">
+          {savedPatterns.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center">No patterns saved yet.</p>
+          ) : (
+            savedPatterns.map((pattern: SavedPattern) => (
+              <div key={pattern.id} className="flex items-center justify-between bg-gray-900/50 p-2 rounded-md group">
+                <button 
+                  onClick={() => onLoadPattern(pattern.id)}
+                  className="text-left flex-1 hover:text-cyan-400 transition-colors"
+                >
+                  <span className="font-semibold">{pattern.name}</span>
+                  <span className="text-xs text-gray-400 block">{pattern.rootNote} Root - {pattern.tuning.name}</span>
+                </button>
+                <button 
+                  onClick={() => onDeletePattern(pattern.id)}
+                  className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label={`Delete pattern ${pattern.name}`}
+                >
+                  <TrashIcon className="w-5 h-5" />
+                </button>
               </div>
-            </div>
+            ))
           )}
         </div>
       </CollapsibleSection>
 
-      <CollapsibleSection title="Export & Paint" isOpen={openSections.manual} onToggle={() => toggleSection('manual')}>
-        <div className="space-y-3">
-          <div className="flex flex-wrap gap-1 justify-center p-1 bg-gray-900/50 rounded-xl">
-            {COLOR_PALETTE.slice(0, 10).map((color, idx) => (
-              <button key={idx} onClick={() => props.setCurrentColor(color)} className={`w-5 h-5 rounded-full ${color.bgColor} ${props.currentColor.bgColor === color.bgColor ? 'ring-2 ring-white scale-110 shadow-lg' : 'opacity-40 hover:opacity-100'}`} />
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => props.updateActiveFretboard({ manualNotes: {} })} className="flex-1 bg-red-500/10 text-red-500 border border-red-500/20 font-bold py-1.5 rounded-lg text-[10px] uppercase">Reset</button>
-            <button onClick={() => setIsSaveModalOpen(true)} className="flex-1 bg-cyan-600 text-white font-bold py-1.5 rounded-lg text-[10px] uppercase shadow-md">Save</button>
-          </div>
-          <button onClick={props.onExport} className="w-full bg-gray-700 text-gray-300 font-bold py-2 rounded-lg text-[10px] uppercase hover:bg-cyan-600 hover:text-white transition-all">Download PNG</button>
+      <CollapsibleSection title="Custom Structures" isOpen={openSections.customStructures} onToggle={() => toggleSection('customStructures')}>
+        <div className="space-y-2">
+          {Object.keys(customStructures).length === 0 ? (
+            <p className="text-sm text-gray-400 text-center">No custom structures saved yet.</p>
+          ) : (
+            Object.entries(customStructures).map(([id, structure]: [string, Structure]) => (
+              <div key={id} className="flex items-center justify-between bg-gray-900/50 p-2 rounded-md group">
+                <span className="font-semibold flex-1">{structure.name}</span>
+                <button 
+                  onClick={() => onDeleteCustomStructure(id)}
+                  className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label={`Delete structure ${structure.name}`}
+                >
+                  <TrashIcon className="w-5 h-5" />
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </CollapsibleSection>
 
-      {/* Save Modal for Patterns */}
       {isSaveModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={() => setIsSaveModalOpen(false)}>
-          <div className="bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-xs border border-gray-700" onClick={e => e.stopPropagation()}>
-            <h3 className="text-sm font-black text-white mb-4 tracking-tight uppercase italic">Save Pattern</h3>
-            <input type="text" value={newPatternName} onChange={e => setNewPatternName(e.target.value)} placeholder="My Lead Lick..." className="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white text-xs outline-none" autoFocus />
-            <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => setIsSaveModalOpen(false)} className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase">Cancel</button>
-              <button onClick={() => { if(newPatternName.trim()){ props.onSavePattern(newPatternName.trim()); setIsSaveModalOpen(false); setNewPatternName(''); } }} className="bg-cyan-600 px-6 py-2 rounded-xl text-[10px] font-bold text-white uppercase shadow-lg">Save</button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setIsSaveModalOpen(false)}>
+          <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-4">Save Pattern</h3>
+            <input
+              type="text"
+              value={newPatternName}
+              onChange={e => setNewPatternName(e.target.value)}
+              placeholder="Enter pattern name..."
+              className="w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-cyan-500 focus:border-cyan-500"
+              autoFocus
+              onKeyDown={e => e.key === 'Enter' && handleSavePattern()}
+            />
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={() => setIsSaveModalOpen(false)}
+                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSavePattern}
+                className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-gray-500"
+                disabled={!newPatternName.trim()}
+              >
+                Save
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Save Modal for Custom Scales */}
       {isSaveStructureModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={() => setIsSaveStructureModalOpen(false)}>
-          <div className="bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-xs border border-gray-700" onClick={e => e.stopPropagation()}>
-            <h3 className="text-sm font-black text-white mb-4 tracking-tight uppercase italic">Save Custom Scale</h3>
-            <input type="text" value={newStructureName} onChange={e => setNewStructureName(e.target.value)} placeholder="Phrygian Dominant..." className="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white text-xs outline-none" autoFocus />
-            <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => setIsSaveStructureModalOpen(false)} className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase">Cancel</button>
-              <button onClick={() => { if(newStructureName.trim()){ props.onSaveCustomStructure(newStructureName.trim()); setIsSaveStructureModalOpen(false); setNewStructureName(''); } }} className="bg-cyan-600 px-6 py-2 rounded-xl text-[10px] font-bold text-white uppercase shadow-lg">Save</button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setIsSaveStructureModalOpen(false)}>
+          <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-4">Save Custom Structure</h3>
+            <input
+              type="text"
+              value={newStructureName}
+              onChange={e => setNewStructureName(e.target.value)}
+              placeholder="Enter structure name..."
+              className="w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-cyan-500 focus:border-cyan-500"
+              autoFocus
+              onKeyDown={e => e.key === 'Enter' && handleSaveStructure()}
+            />
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={() => setIsSaveStructureModalOpen(false)}
+                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveStructure}
+                className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-gray-500"
+                disabled={!newStructureName.trim()}
+              >
+                Save
+              </button>
             </div>
           </div>
         </div>
