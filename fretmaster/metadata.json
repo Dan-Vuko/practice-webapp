@@ -1,0 +1,5 @@
+{
+  "name": "Interactive Guitar Fretboard",
+  "description": "An interactive guitar fretboard visualization app to explore chord structures and custom note patterns. Visualize the Major 9 chord, select different keys, and manually highlight notes with custom colors to build your own patterns.",
+  "requestFramePermissions": []
+}
