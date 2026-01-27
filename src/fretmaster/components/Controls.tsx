@@ -30,6 +30,8 @@ interface ControlsProps {
   setInstrument: (inst: Instrument) => void;
   onExport: () => void;
   onStrum: () => void;
+  favorites: string[];
+  onToggleFavorite: (structureKey: string) => void;
 }
 
 const CollapsibleSection: React.FC<{ title: string; isOpen: boolean; onToggle: () => void; children: React.ReactNode }> = ({ title, isOpen, onToggle, children }) => (
@@ -168,24 +170,48 @@ const Controls: React.FC<ControlsProps> = (props) => {
         <div className="space-y-3">
           <div>
             <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Visualization</label>
-            <select
-              value={props.activeFretboard.globalStructure}
-              onChange={(e) => props.updateActiveFretboard({ globalStructure: e.target.value })}
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white mb-2"
-            >
-              {Object.entries(CATEGORIZED_STRUCTURES).map(([categoryName, categoryStructures]) => (
-                <optgroup key={categoryName} label={categoryName}>
-                  {Object.entries(categoryStructures).map(([key, structure]) => (
-                    <option key={key} value={key}>{structure.name}</option>
-                  ))}
-                </optgroup>
-              ))}
-              {Object.keys(props.customStructures).length > 0 && (
-                <optgroup label="Custom">
-                  {Object.entries(props.customStructures).map(([key, structure]) => <option key={key} value={key}>{structure.name}</option>)}
-                </optgroup>
-              )}
-            </select>
+            <div className="flex gap-2 mb-2">
+              <select
+                value={props.activeFretboard.globalStructure}
+                onChange={(e) => props.updateActiveFretboard({ globalStructure: e.target.value })}
+                className="flex-1 bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white"
+              >
+                {/* Favorites at top */}
+                {props.favorites.length > 0 && (
+                  <optgroup label="★ Favorites">
+                    {props.favorites.map(key => {
+                      const structure = allStructures[key];
+                      if (!structure) return null;
+                      return <option key={`fav-${key}`} value={key}>★ {structure.name}</option>;
+                    })}
+                  </optgroup>
+                )}
+                {Object.entries(CATEGORIZED_STRUCTURES).map(([categoryName, categoryStructures]) => (
+                  <optgroup key={categoryName} label={categoryName}>
+                    {Object.entries(categoryStructures).map(([key, structure]) => (
+                      <option key={key} value={key}>{structure.name}</option>
+                    ))}
+                  </optgroup>
+                ))}
+                {Object.keys(props.customStructures).length > 0 && (
+                  <optgroup label="Custom">
+                    {Object.entries(props.customStructures).map(([key, structure]) => <option key={key} value={key}>{structure.name}</option>)}
+                  </optgroup>
+                )}
+              </select>
+              {/* Favorite toggle button */}
+              <button
+                onClick={() => props.onToggleFavorite(props.activeFretboard.globalStructure)}
+                className={`px-3 rounded-lg border transition-all ${
+                  props.favorites.includes(props.activeFretboard.globalStructure)
+                    ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400'
+                    : 'bg-gray-900 border-gray-700 text-gray-500 hover:text-yellow-400 hover:border-yellow-500/50'
+                }`}
+                title={props.favorites.includes(props.activeFretboard.globalStructure) ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                ★
+              </button>
+            </div>
             {props.detectedStructureName && (
               <div className="px-2 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded text-[10px] text-cyan-400 font-bold text-center animate-pulse">
                 DETECTED: {props.detectedStructureName}

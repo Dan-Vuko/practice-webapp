@@ -78,5 +78,15 @@ CREATE TABLE IF NOT EXISTS fret_patterns (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- FretMaster: User Favorites for scales/structures
+CREATE TABLE IF NOT EXISTS fretboard_favorites (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  structure_key TEXT NOT NULL,  -- e.g., 'minor_blues_sus_min', 'major', etc.
+  display_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, structure_key)
+);
+
 -- RLS disabled for admin testing
 -- Patterns are managed in localStorage per-user, progress tracked in Supabase

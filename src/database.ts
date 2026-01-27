@@ -272,6 +272,58 @@ class SpeedBuilderDB {
     if (error) throw error
     return data || []
   }
+
+  // ==========================================
+  // FRETBOARD FAVORITES OPERATIONS
+  // ==========================================
+
+  async addFavorite(structureKey: string): Promise<void> {
+    const userId = await getCurrentUserId()
+    const { error } = await supabase
+      .from('fretboard_favorites')
+      .upsert({
+        user_id: userId,
+        structure_key: structureKey,
+      }, { onConflict: 'user_id,structure_key' })
+
+    if (error) throw error
+  }
+
+  async removeFavorite(structureKey: string): Promise<void> {
+    const userId = await getCurrentUserId()
+    const { error } = await supabase
+      .from('fretboard_favorites')
+      .delete()
+      .eq('user_id', userId)
+      .eq('structure_key', structureKey)
+
+    if (error) throw error
+  }
+
+  async getFavorites(): Promise<string[]> {
+    const userId = await getCurrentUserId()
+    const { data, error } = await supabase
+      .from('fretboard_favorites')
+      .select('structure_key')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+
+    if (error) throw error
+    return (data || []).map(d => d.structure_key)
+  }
+
+  async isFavorite(structureKey: string): Promise<boolean> {
+    const userId = await getCurrentUserId()
+    const { data, error } = await supabase
+      .from('fretboard_favorites')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('structure_key', structureKey)
+      .maybeSingle()
+
+    if (error) throw error
+    return !!data
+  }
 }
 
 // Singleton instance

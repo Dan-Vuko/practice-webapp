@@ -7,6 +7,7 @@ import type { Tuning, HighlightedNote, Color, RingColor, SavedPattern, Structure
 import { getNoteOnFret, getIntervalFromRoot, midiToFrequency } from './utils/music';
 import { playNote } from './utils/audio';
 import { exportFretboardToPng } from './utils/export';
+import { db } from '../database';
 
 const structureIntervalsMap = new Map<string, string>();
 for (const key in STRUCTURES) {
@@ -44,7 +45,9 @@ const App: React.FC = () => {
   const [customStructures, setCustomStructures] = useState<Record<string, Structure>>({});
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [instrument, setInstrument] = useState<Instrument>('pluck');
+  const [favorites, setFavorites] = useState<string[]>([]);
 
+  // Load saved data on mount
   useEffect(() => {
     try {
       const storedPatterns = localStorage.getItem('fretmaster_patterns');
@@ -52,7 +55,24 @@ const App: React.FC = () => {
       const storedStructures = localStorage.getItem('fretmaster_structures');
       if (storedStructures) setCustomStructures(JSON.parse(storedStructures));
     } catch (e) { console.error(e); }
+
+    // Load favorites from Supabase
+    db.getFavorites().then(setFavorites).catch(console.error);
   }, []);
+
+  const toggleFavorite = useCallback(async (structureKey: string) => {
+    try {
+      if (favorites.includes(structureKey)) {
+        await db.removeFavorite(structureKey);
+        setFavorites(prev => prev.filter(k => k !== structureKey));
+      } else {
+        await db.addFavorite(structureKey);
+        setFavorites(prev => [...prev, structureKey]);
+      }
+    } catch (e) {
+      console.error('Failed to toggle favorite:', e);
+    }
+  }, [favorites]);
 
   const allStructures = useMemo((): Record<string, Structure> => ({ ...STRUCTURES, ...customStructures }), [customStructures]);
 
@@ -339,6 +359,8 @@ const App: React.FC = () => {
           setInstrument={setInstrument}
           onExport={handleExport}
           onStrum={strumAll}
+          favorites={favorites}
+          onToggleFavorite={toggleFavorite}
         />
 
         <div className="flex-1 flex flex-col gap-6 overflow-y-auto">
