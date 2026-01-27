@@ -115,7 +115,7 @@ const Controls: React.FC<ControlsProps> = (props) => {
           className="p-2 bg-gray-700 text-cyan-400 rounded-lg hover:bg-cyan-600 hover:text-white transition-all"
           title="Expand panel"
         >
-          <ChevronIcon className="w-4 h-4 rotate-90" />
+          <ChevronIcon className="w-4 h-4 -rotate-90" />
         </button>
         <div className="w-px h-8 bg-gray-600" />
         <button
@@ -147,7 +147,7 @@ const Controls: React.FC<ControlsProps> = (props) => {
             className="hidden lg:flex p-1 bg-gray-700 text-gray-400 rounded hover:bg-gray-600 hover:text-cyan-400 transition-all"
             title="Collapse panel"
           >
-            <ChevronIcon className="w-3 h-3 -rotate-90" />
+            <ChevronIcon className="w-3 h-3 rotate-90" />
           </button>
           <h2 className="text-lg font-black text-cyan-400 uppercase tracking-tighter italic">FretMaster</h2>
         </div>
