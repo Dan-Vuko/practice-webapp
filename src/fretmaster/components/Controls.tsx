@@ -52,6 +52,7 @@ const CollapsibleSection: React.FC<{ title: string; isOpen: boolean; onToggle: (
 );
 
 const Controls: React.FC<ControlsProps> = (props) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     setup: true,
     structure: true,
@@ -105,10 +106,51 @@ const Controls: React.FC<ControlsProps> = (props) => {
     return match ? match[0] : 'daead';
   }, [props.tuning.name]);
 
+  // Collapsed view - just a slim bar with expand button
+  if (isCollapsed) {
+    return (
+      <div className="hidden lg:flex flex-col items-center bg-gray-800/80 backdrop-blur-md p-2 rounded-2xl shadow-2xl border border-gray-700 gap-2">
+        <button
+          onClick={() => setIsCollapsed(false)}
+          className="p-2 bg-gray-700 text-cyan-400 rounded-lg hover:bg-cyan-600 hover:text-white transition-all"
+          title="Expand panel"
+        >
+          <ChevronIcon className="w-4 h-4 rotate-90" />
+        </button>
+        <div className="w-px h-8 bg-gray-600" />
+        <button
+          onClick={() => props.setIsSoundEnabled(!props.isSoundEnabled)}
+          className={`p-2 rounded-lg transition-all ${props.isSoundEnabled ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-500'}`}
+          title={props.isSoundEnabled ? 'Mute' : 'Unmute'}
+        >
+          <SpeakerIcon className="w-4 h-4" enabled={props.isSoundEnabled} />
+        </button>
+        {props.isSoundEnabled && (
+          <button
+            onClick={props.onStrum}
+            className="p-2 bg-gray-700 text-cyan-400 rounded-lg hover:bg-cyan-600 hover:text-white transition-all"
+            title="Strum"
+          >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="w-full lg:w-[340px] bg-gray-800/80 backdrop-blur-md p-3 rounded-2xl shadow-2xl flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-100px)] border border-gray-700 custom-scrollbar">
       <div className="flex items-center justify-between mb-1">
-        <h2 className="text-lg font-black text-cyan-400 uppercase tracking-tighter italic">FretMaster</h2>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsCollapsed(true)}
+            className="hidden lg:flex p-1 bg-gray-700 text-gray-400 rounded hover:bg-gray-600 hover:text-cyan-400 transition-all"
+            title="Collapse panel"
+          >
+            <ChevronIcon className="w-3 h-3 -rotate-90" />
+          </button>
+          <h2 className="text-lg font-black text-cyan-400 uppercase tracking-tighter italic">FretMaster</h2>
+        </div>
         <div className="flex gap-1">
           {props.isSoundEnabled && (
             <button
