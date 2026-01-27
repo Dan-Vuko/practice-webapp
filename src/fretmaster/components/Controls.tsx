@@ -35,16 +35,16 @@ interface ControlsProps {
 }
 
 const CollapsibleSection: React.FC<{ title: string; isOpen: boolean; onToggle: () => void; children: React.ReactNode }> = ({ title, isOpen, onToggle, children }) => (
-  <div className="bg-gray-700/30 rounded-xl transition-all duration-300 border border-gray-700/50 overflow-hidden">
+  <div className="bg-gray-700/30 rounded-lg transition-all duration-300 border border-gray-700/50 overflow-hidden">
     <button
       onClick={onToggle}
-      className="w-full flex justify-between items-center p-3 text-left font-bold text-gray-300 hover:text-cyan-400 hover:bg-gray-700/50 transition-all"
+      className="w-full flex justify-between items-center px-3 py-2 text-left font-bold text-gray-300 hover:text-cyan-400 hover:bg-gray-700/50 transition-all"
     >
-      <span className="text-xs tracking-wide uppercase">{title}</span>
-      <ChevronIcon className={`w-4 h-4 transition-transform duration-300 ${isOpen ? '' : '-rotate-90'}`} />
+      <span className="text-[11px] tracking-wide uppercase">{title}</span>
+      <ChevronIcon className={`w-3 h-3 transition-transform duration-300 ${isOpen ? '' : '-rotate-90'}`} />
     </button>
     {isOpen && (
-      <div className="p-3 border-t border-gray-700/50 bg-gray-800/20">
+      <div className="px-3 py-2 border-t border-gray-700/50 bg-gray-800/20">
         {children}
       </div>
     )}
@@ -106,14 +106,14 @@ const Controls: React.FC<ControlsProps> = (props) => {
   }, [props.tuning.name]);
 
   return (
-    <div className="w-full lg:w-80 bg-gray-800/80 backdrop-blur-md p-4 rounded-2xl shadow-2xl flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-100px)] border border-gray-700 custom-scrollbar">
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-xl font-black text-cyan-400 uppercase tracking-tighter italic">FretMaster</h2>
-        <div className="flex gap-2">
+    <div className="w-full lg:w-[340px] bg-gray-800/80 backdrop-blur-md p-3 rounded-2xl shadow-2xl flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-100px)] border border-gray-700 custom-scrollbar">
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-lg font-black text-cyan-400 uppercase tracking-tighter italic">FretMaster</h2>
+        <div className="flex gap-1">
           {props.isSoundEnabled && (
             <button
               onClick={props.onStrum}
-              className="p-2 bg-gray-700 text-cyan-400 rounded-xl hover:bg-cyan-600 hover:text-white transition-all shadow-sm"
+              className="p-1.5 bg-gray-700 text-cyan-400 rounded-lg hover:bg-cyan-600 hover:text-white transition-all shadow-sm"
               title="Strum Visualization"
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
@@ -121,7 +121,7 @@ const Controls: React.FC<ControlsProps> = (props) => {
           )}
           <button
             onClick={() => props.setIsSoundEnabled(!props.isSoundEnabled)}
-            className={`p-2 rounded-xl transition-all ${props.isSoundEnabled ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-500'}`}
+            className={`p-1.5 rounded-lg transition-all ${props.isSoundEnabled ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-500'}`}
           >
             <SpeakerIcon className="w-4 h-4" enabled={props.isSoundEnabled} />
           </button>
@@ -129,13 +129,13 @@ const Controls: React.FC<ControlsProps> = (props) => {
       </div>
 
       {/* Active Fretboard Indicator */}
-      <div className="p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-xl">
-        <div className="text-xs text-gray-500 uppercase mb-1">Editing</div>
-        <div className="text-sm font-bold text-cyan-400">{props.activeFretboard.name}</div>
+      <div className="px-2 py-1.5 bg-cyan-500/10 border border-cyan-500/30 rounded-lg flex items-center justify-between">
+        <span className="text-[10px] text-gray-500 uppercase">Editing:</span>
+        <span className="text-xs font-bold text-cyan-400">{props.activeFretboard.name}</span>
       </div>
       
       <CollapsibleSection title="Setup" isOpen={openSections.setup} onToggle={() => toggleSection('setup')}>
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Root</label>
@@ -167,7 +167,7 @@ const Controls: React.FC<ControlsProps> = (props) => {
       </CollapsibleSection>
 
       <CollapsibleSection title="Theory" isOpen={openSections.structure} onToggle={() => toggleSection('structure')}>
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div>
             <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Visualization</label>
             <div className="flex gap-2 mb-2">
@@ -246,7 +246,7 @@ const Controls: React.FC<ControlsProps> = (props) => {
       </CollapsibleSection>
 
       <CollapsibleSection title="Display" isOpen={openSections.display} onToggle={() => toggleSection('display')}>
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div>
             <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Label Type</label>
             <select
@@ -264,7 +264,7 @@ const Controls: React.FC<ControlsProps> = (props) => {
       </CollapsibleSection>
 
       <CollapsibleSection title="Advanced: Groups" isOpen={openSections.advanced} onToggle={() => toggleSection('advanced')}>
-        <div className="space-y-3">
+        <div className="space-y-2">
            <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Group Mode</span>
             <button
@@ -314,7 +314,7 @@ const Controls: React.FC<ControlsProps> = (props) => {
       </CollapsibleSection>
 
       <CollapsibleSection title="Export & Paint" isOpen={openSections.manual} onToggle={() => toggleSection('manual')}>
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div className="flex flex-wrap gap-1 justify-center p-1 bg-gray-900/50 rounded-xl">
             {/* No Paint option */}
             <button
