@@ -11,8 +11,8 @@ interface ControlsProps {
   updateActiveFretboard: (updates: Partial<FretboardInstance>) => void;
   tuning: Tuning;
   setTuning: (tuning: Tuning) => void;
-  currentColor: Color;
-  setCurrentColor: (color: Color) => void;
+  currentColor: Color | null;
+  setCurrentColor: (color: Color | null) => void;
   currentRing: RingColor;
   setCurrentRing: (ring: RingColor) => void;
   savedPatterns: SavedPattern[];
@@ -290,8 +290,16 @@ const Controls: React.FC<ControlsProps> = (props) => {
       <CollapsibleSection title="Export & Paint" isOpen={openSections.manual} onToggle={() => toggleSection('manual')}>
         <div className="space-y-3">
           <div className="flex flex-wrap gap-1 justify-center p-1 bg-gray-900/50 rounded-xl">
+            {/* No Paint option */}
+            <button
+              onClick={() => props.setCurrentColor(null)}
+              className={`w-5 h-5 rounded-full border-2 border-gray-500 flex items-center justify-center ${props.currentColor === null ? 'ring-2 ring-white scale-110 shadow-lg bg-gray-800' : 'opacity-40 hover:opacity-100 bg-gray-900'}`}
+              title="No paint (click only)"
+            >
+              <span className="text-gray-400 text-[8px] font-bold">⊘</span>
+            </button>
             {COLOR_PALETTE.slice(0, 10).map((color, idx) => (
-              <button key={idx} onClick={() => props.setCurrentColor(color)} className={`w-5 h-5 rounded-full ${color.bgColor} ${props.currentColor.bgColor === color.bgColor ? 'ring-2 ring-white scale-110 shadow-lg' : 'opacity-40 hover:opacity-100'}`} />
+              <button key={idx} onClick={() => props.setCurrentColor(color)} className={`w-5 h-5 rounded-full ${color.bgColor} ${props.currentColor?.bgColor === color.bgColor ? 'ring-2 ring-white scale-110 shadow-lg' : 'opacity-40 hover:opacity-100'}`} />
             ))}
           </div>
           <div className="flex gap-2">

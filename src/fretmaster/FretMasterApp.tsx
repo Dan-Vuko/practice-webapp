@@ -38,7 +38,7 @@ const App: React.FC = () => {
 
   // Shared global state
   const [tuning, setTuning] = useState<Tuning>(TUNINGS.daead);
-  const [currentColor, setCurrentColor] = useState<Color>(COLOR_PALETTE[0]);
+  const [currentColor, setCurrentColor] = useState<Color | null>(null);
   const [currentRing, setCurrentRing] = useState<RingColor>(RING_COLOR_PALETTE[0]);
   const [savedPatterns, setSavedPatterns] = useState<SavedPattern[]>([]);
   const [customStructures, setCustomStructures] = useState<Record<string, Structure>>({});
@@ -357,14 +357,18 @@ const App: React.FC = () => {
               onNoteClick={(sIdx, fret) => {
                 const noteInfo = getNoteOnFret(tuning.strings[sIdx], fret);
                 if (isSoundEnabled && noteInfo.midi) playNote(midiToFrequency(noteInfo.midi), instrument);
-                const key = `${sIdx}-${fret}`;
-                const updatedManualNotes = { ...fb.manualNotes };
-                if (updatedManualNotes[key]) delete updatedManualNotes[key];
-                else updatedManualNotes[key] = { color: currentColor, ring: currentRing };
 
-                setFretboards(prev => prev.map(f =>
-                  f.id === fb.id ? { ...f, manualNotes: updatedManualNotes } : f
-                ));
+                // Only paint if a color is selected (not in "no paint" mode)
+                if (currentColor) {
+                  const key = `${sIdx}-${fret}`;
+                  const updatedManualNotes = { ...fb.manualNotes };
+                  if (updatedManualNotes[key]) delete updatedManualNotes[key];
+                  else updatedManualNotes[key] = { color: currentColor, ring: currentRing };
+
+                  setFretboards(prev => prev.map(f =>
+                    f.id === fb.id ? { ...f, manualNotes: updatedManualNotes } : f
+                  ));
+                }
               }}
             />
           ))}
