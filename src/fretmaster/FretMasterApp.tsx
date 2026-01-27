@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import FretboardContainer from './components/FretboardContainer';
 import Controls from './components/Controls';
 import { PlusIcon } from './components/icons/PlusIcon';
-import { TUNINGS, FRET_COUNT, STRUCTURES, COLOR_PALETTE, RING_COLOR_PALETTE, SARGAM_NAMES, INTERVAL_NAMES, INTERVAL_COLORS, DEFAULT_THEME, ROMAN_DEGREES } from './constants';
+import { TUNINGS, FRET_COUNT, STRUCTURES, RING_COLOR_PALETTE, SARGAM_NAMES, INTERVAL_NAMES, INTERVAL_COLORS, DEFAULT_THEME, ROMAN_DEGREES } from './constants';
 import type { Tuning, HighlightedNote, Color, RingColor, SavedPattern, Structure, StringGroup, Instrument, FretboardInstance } from './types';
 import { getNoteOnFret, getIntervalFromRoot, midiToFrequency } from './utils/music';
 import { playNote } from './utils/audio';
