@@ -8,14 +8,18 @@ const createPattern = (
   pattern: string,
   sequence: number[],
   folderId: string,
-  comment: string = ''
+  description: string = ''
 ): PatternItem => ({
   id,
   name,
   pattern,
   sequence,
   folderId,
-  comment,
+  notes: description ? [{
+    id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    text: description,
+    createdAt: new Date().toISOString()
+  }] : [],
   isFolder: false as const,
   current_bpm: 60,
   target_bpm: 150,
@@ -85,13 +89,21 @@ export interface PatternFolder {
   isFolder: true
 }
 
+export interface PatternNote {
+  id: string
+  text: string
+  createdAt: string   // ISO date
+  updatedAt?: string  // ISO date, set on edit
+}
+
 export interface PatternItem {
   id: string
   name: string
   pattern: string
   sequence: number[]
   folderId: string
-  comment: string
+  notes: PatternNote[]
+  comment?: string  // legacy, migrated to notes
   isFolder: false
   // Progress tracking
   current_bpm: number
@@ -143,9 +155,11 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
   const [editingNameId, setEditingNameId] = useState<string | null>(null)
   const [editNameValue, setEditNameValue] = useState('')
 
-  // Comment editing
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
-  const [editCommentValue, setEditCommentValue] = useState('')
+  // Notes popup
+  const [notesPatternId, setNotesPatternId] = useState<string | null>(null)
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
+  const [editNoteValue, setEditNoteValue] = useState('')
+  const [newNoteValue, setNewNoteValue] = useState('')
 
   useEffect(() => {
     loadDatabase()
@@ -170,9 +184,27 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
     }
   }
 
+  const migrateItemNotes = (itemList: TreeItem[]): TreeItem[] => {
+    return itemList.map(item => {
+      if (item.isFolder) return item
+      const p = item as PatternItem & { comment?: string }
+      if (p.notes) return item // already migrated
+      const notes: PatternNote[] = []
+      if (p.comment) {
+        notes.push({
+          id: `note-migrated-${Math.random().toString(36).slice(2, 8)}`,
+          text: p.comment,
+          createdAt: p.last_practiced || new Date().toISOString()
+        })
+      }
+      const { comment: _, ...rest } = p
+      return { ...rest, notes } as PatternItem
+    })
+  }
+
   const loadDatabase = () => {
     const storedData = localStorage.getItem('patternDatabase')
-    const CURRENT_VERSION = 2 // Increment when adding new default patterns
+    const CURRENT_VERSION = 3 // Increment when adding new default patterns
     const storedVersion = parseInt(localStorage.getItem('patternDatabaseVersion') || '0')
 
     if (storedData && storedVersion >= CURRENT_VERSION) {
@@ -186,8 +218,8 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
       const existingIds = new Set(existingItems.map(item => item.id))
       const newItems = defaultItems.filter(item => !existingIds.has(item.id))
 
-      // Merge and save
-      const mergedItems = [...existingItems, ...newItems]
+      // Merge, migrate, and save
+      const mergedItems = migrateItemNotes([...existingItems, ...newItems])
       setItems(mergedItems)
       localStorage.setItem('patternDatabase', JSON.stringify(mergedItems))
       localStorage.setItem('patternDatabaseVersion', CURRENT_VERSION.toString())
@@ -203,7 +235,7 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
       const defaultItems = getDefaultItems()
       setItems(defaultItems)
       localStorage.setItem('patternDatabase', JSON.stringify(defaultItems))
-      localStorage.setItem('patternDatabaseVersion', '2')
+      localStorage.setItem('patternDatabaseVersion', CURRENT_VERSION.toString())
 
       // Expand all folders by default
       setExpandedFolders(new Set([
@@ -253,20 +285,25 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
     // Use default sequence for custom patterns
     const defaultSequence = [1, 2, 3, 1]
 
+    const now = new Date().toISOString()
     const newPattern: PatternItem = {
       id: `pattern-${Date.now()}`,
       name: newPatternName,
       pattern: newPatternName, // Use name as pattern identifier
       sequence: defaultSequence,
       folderId: selectedFolderId,
-      comment: newPatternComment,
+      notes: newPatternComment.trim() ? [{
+        id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        text: newPatternComment.trim(),
+        createdAt: now
+      }] : [],
       isFolder: false,
       current_bpm: newStartingBpm,
       target_bpm: newTargetBpm,
       total_sessions: 0,
       total_practice_minutes: 0,
       total_reps: 0,
-      last_practiced: new Date().toISOString()
+      last_practiced: now
     }
 
     const newItems = [...items, newPattern]
@@ -395,33 +432,71 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
     }
   }
 
-  const handleCommentDoubleClick = (pattern: PatternItem) => {
-    setEditingCommentId(pattern.id)
-    setEditCommentValue(pattern.comment || '')
+  const handleOpenNotes = (patternId: string) => {
+    setNotesPatternId(patternId)
+    setEditingNoteId(null)
+    setEditNoteValue('')
+    setNewNoteValue('')
   }
 
-  const handleCommentSave = () => {
-    if (!editingCommentId) {
-      setEditingCommentId(null)
-      return
+  const handleCloseNotes = () => {
+    setNotesPatternId(null)
+    setEditingNoteId(null)
+    setEditNoteValue('')
+    setNewNoteValue('')
+  }
+
+  const handleAddNote = () => {
+    if (!notesPatternId || !newNoteValue.trim()) return
+    const note: PatternNote = {
+      id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      text: newNoteValue.trim(),
+      createdAt: new Date().toISOString()
     }
     const newItems = items.map(item => {
-      if (item.id === editingCommentId && !item.isFolder) {
-        return { ...item, comment: editCommentValue.trim() }
+      if (item.id === notesPatternId && !item.isFolder) {
+        return { ...item, notes: [note, ...item.notes] }
       }
       return item
     })
     saveDatabase(newItems)
-    setEditingCommentId(null)
+    setNewNoteValue('')
   }
 
-  const handleCommentKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleCommentSave()
-    } else if (e.key === 'Escape') {
-      setEditingCommentId(null)
-    }
+  const handleStartEditNote = (note: PatternNote) => {
+    setEditingNoteId(note.id)
+    setEditNoteValue(note.text)
+  }
+
+  const handleSaveNoteEdit = () => {
+    if (!notesPatternId || !editingNoteId) return
+    const newItems = items.map(item => {
+      if (item.id === notesPatternId && !item.isFolder) {
+        return {
+          ...item,
+          notes: item.notes.map(n =>
+            n.id === editingNoteId
+              ? { ...n, text: editNoteValue.trim(), updatedAt: new Date().toISOString() }
+              : n
+          )
+        }
+      }
+      return item
+    })
+    saveDatabase(newItems)
+    setEditingNoteId(null)
+    setEditNoteValue('')
+  }
+
+  const handleDeleteNote = (noteId: string) => {
+    if (!notesPatternId) return
+    const newItems = items.map(item => {
+      if (item.id === notesPatternId && !item.isFolder) {
+        return { ...item, notes: item.notes.filter(n => n.id !== noteId) }
+      }
+      return item
+    })
+    saveDatabase(newItems)
   }
 
   const getFolders = (): PatternFolder[] => {
@@ -621,35 +696,23 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                         <span className="text-content-tertiary ml-1" title="Sessions">{sessionCounts[pattern.id] || 0}s</span>
                         <span className="text-content-tertiary" title="Total practice time">{pattern.total_practice_minutes}m</span>
                       </div>
-                      {editingCommentId === pattern.id ? (
-                        <textarea
-                          value={editCommentValue}
-                          onChange={(e) => setEditCommentValue(e.target.value)}
-                          onBlur={handleCommentSave}
-                          onKeyDown={handleCommentKeyPress}
-                          className="text-[9px] text-content-muted bg-theme-elevated border border-border-hover rounded px-1 py-0.5 w-40 resize-none"
-                          rows={2}
-                          autoFocus
-                          onClick={(e) => e.stopPropagation()}
-                          placeholder="Add a note..."
-                        />
-                      ) : pattern.comment ? (
-                        <div className="relative group/comment">
-                          <span
-                            className="text-content-tertiary text-[8px] px-1 bg-theme-elevated rounded cursor-pointer hover:bg-theme-hover"
-                            onDoubleClick={(e) => { e.stopPropagation(); handleCommentDoubleClick(pattern) }}
-                            title="Double-click to edit"
-                          >💬</span>
-                          <div className="absolute bottom-full left-0 mb-1 hidden group-hover/comment:block bg-theme-base border border-border-hover rounded px-2 py-1 text-[9px] text-content-muted w-40 z-10">
-                            {pattern.comment}
+                      {pattern.notes.length > 0 ? (
+                        <div className="relative group/notes">
+                          <button
+                            className="text-[8px] px-1 bg-theme-elevated rounded cursor-pointer hover:bg-theme-hover text-content-tertiary"
+                            onClick={(e) => { e.stopPropagation(); handleOpenNotes(pattern.id) }}
+                            title={pattern.notes[0]?.text || ''}
+                          >📝{pattern.notes.length}</button>
+                          <div className="absolute bottom-full left-0 mb-1 hidden group-hover/notes:block bg-theme-base border border-border-hover rounded px-2 py-1 text-[9px] text-content-muted w-48 z-10 whitespace-pre-wrap">
+                            {pattern.notes[0]?.text.slice(0, 120)}{pattern.notes[0]?.text.length > 120 ? '...' : ''}
                           </div>
                         </div>
                       ) : (
-                        <span
-                          className="text-content-tertiary text-[8px] px-1 opacity-0 group-hover:opacity-40 hover:!opacity-100 cursor-pointer rounded hover:bg-theme-elevated"
-                          onDoubleClick={(e) => { e.stopPropagation(); handleCommentDoubleClick(pattern) }}
-                          title="Double-click to add note"
-                        >💬</span>
+                        <button
+                          className="text-[8px] px-1 opacity-0 group-hover:opacity-40 hover:!opacity-100 cursor-pointer rounded hover:bg-theme-elevated text-content-tertiary"
+                          onClick={(e) => { e.stopPropagation(); handleOpenNotes(pattern.id) }}
+                          title="Add notes"
+                        >📝</button>
                       )}
                       {onEditWorkout && (
                         <button
@@ -904,6 +967,113 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
           </div>
         </div>
       )}
+
+      {/* Notes Popup */}
+      {notesPatternId && (() => {
+        const notesPattern = items.find(i => i.id === notesPatternId && !i.isFolder) as PatternItem | undefined
+        if (!notesPattern) return null
+        return (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={handleCloseNotes}>
+            <div className="bg-theme-surface rounded-lg border border-border max-w-lg w-full max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+              {/* Header */}
+              <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
+                <h3 className="text-lg font-bold text-content-primary truncate">Notes: {notesPattern.name}</h3>
+                <button
+                  onClick={handleCloseNotes}
+                  className="text-content-secondary hover:text-content-primary text-lg px-2"
+                >✕</button>
+              </div>
+
+              {/* Add note */}
+              <div className="p-4 border-b border-border shrink-0">
+                <textarea
+                  value={newNoteValue}
+                  onChange={(e) => setNewNoteValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleAddNote()
+                    }
+                  }}
+                  className="w-full bg-theme-elevated text-content-primary px-3 py-2 rounded-lg text-sm resize-none"
+                  rows={2}
+                  placeholder="Write a note..."
+                  autoFocus
+                />
+                <button
+                  onClick={handleAddNote}
+                  disabled={!newNoteValue.trim()}
+                  className="mt-2 px-4 py-1.5 bg-accent hover:bg-accent-hover disabled:opacity-40 text-content-primary rounded text-sm font-semibold transition-colors"
+                >
+                  Add Note
+                </button>
+              </div>
+
+              {/* Notes list */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {notesPattern.notes.length === 0 ? (
+                  <p className="text-content-tertiary text-sm text-center py-8">No notes yet</p>
+                ) : (
+                  notesPattern.notes.map(note => (
+                    <div key={note.id} className="bg-theme-elevated rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] text-content-tertiary">
+                          {new Date(note.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                          {note.updatedAt && ' (edited)'}
+                        </span>
+                        <div className="flex gap-1">
+                          {editingNoteId === note.id ? (
+                            <>
+                              <button
+                                onClick={handleSaveNoteEdit}
+                                className="text-[9px] px-1.5 py-0.5 bg-accent hover:bg-accent-hover text-content-primary rounded"
+                              >Save</button>
+                              <button
+                                onClick={() => setEditingNoteId(null)}
+                                className="text-[9px] px-1.5 py-0.5 bg-theme-hover hover:bg-theme-base text-content-secondary rounded"
+                              >Cancel</button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleStartEditNote(note)}
+                                className="text-[9px] px-1.5 py-0.5 bg-theme-hover hover:bg-theme-base text-content-secondary rounded"
+                              >Edit</button>
+                              <button
+                                onClick={() => handleDeleteNote(note.id)}
+                                className="text-[9px] px-1.5 py-0.5 bg-status-error-hover hover:bg-status-error text-content-primary rounded"
+                              >Delete</button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      {editingNoteId === note.id ? (
+                        <textarea
+                          value={editNoteValue}
+                          onChange={(e) => setEditNoteValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault()
+                              handleSaveNoteEdit()
+                            } else if (e.key === 'Escape') {
+                              setEditingNoteId(null)
+                            }
+                          }}
+                          className="w-full bg-theme-base text-content-primary px-2 py-1 rounded text-sm resize-none"
+                          rows={3}
+                          autoFocus
+                        />
+                      ) : (
+                        <p className="text-sm text-content-muted whitespace-pre-wrap">{note.text}</p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
