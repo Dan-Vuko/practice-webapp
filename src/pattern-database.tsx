@@ -143,6 +143,10 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
   const [editingNameId, setEditingNameId] = useState<string | null>(null)
   const [editNameValue, setEditNameValue] = useState('')
 
+  // Comment editing
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [editCommentValue, setEditCommentValue] = useState('')
+
   useEffect(() => {
     loadDatabase()
     loadSessionCounts()
@@ -391,6 +395,35 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
     }
   }
 
+  const handleCommentDoubleClick = (pattern: PatternItem) => {
+    setEditingCommentId(pattern.id)
+    setEditCommentValue(pattern.comment || '')
+  }
+
+  const handleCommentSave = () => {
+    if (!editingCommentId) {
+      setEditingCommentId(null)
+      return
+    }
+    const newItems = items.map(item => {
+      if (item.id === editingCommentId && !item.isFolder) {
+        return { ...item, comment: editCommentValue.trim() }
+      }
+      return item
+    })
+    saveDatabase(newItems)
+    setEditingCommentId(null)
+  }
+
+  const handleCommentKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleCommentSave()
+    } else if (e.key === 'Escape') {
+      setEditingCommentId(null)
+    }
+  }
+
   const getFolders = (): PatternFolder[] => {
     return items.filter(item => item.isFolder) as PatternFolder[]
   }
@@ -588,13 +621,35 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                         <span className="text-content-tertiary ml-1" title="Sessions">{sessionCounts[pattern.id] || 0}s</span>
                         <span className="text-content-tertiary" title="Total practice time">{pattern.total_practice_minutes}m</span>
                       </div>
-                      {pattern.comment && (
+                      {editingCommentId === pattern.id ? (
+                        <textarea
+                          value={editCommentValue}
+                          onChange={(e) => setEditCommentValue(e.target.value)}
+                          onBlur={handleCommentSave}
+                          onKeyDown={handleCommentKeyPress}
+                          className="text-[9px] text-content-muted bg-theme-elevated border border-border-hover rounded px-1 py-0.5 w-40 resize-none"
+                          rows={2}
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()}
+                          placeholder="Add a note..."
+                        />
+                      ) : pattern.comment ? (
                         <div className="relative group/comment">
-                          <span className="text-content-tertiary text-[8px] px-1 bg-theme-elevated rounded cursor-help">💬</span>
+                          <span
+                            className="text-content-tertiary text-[8px] px-1 bg-theme-elevated rounded cursor-pointer hover:bg-theme-hover"
+                            onDoubleClick={(e) => { e.stopPropagation(); handleCommentDoubleClick(pattern) }}
+                            title="Double-click to edit"
+                          >💬</span>
                           <div className="absolute bottom-full left-0 mb-1 hidden group-hover/comment:block bg-theme-base border border-border-hover rounded px-2 py-1 text-[9px] text-content-muted w-40 z-10">
                             {pattern.comment}
                           </div>
                         </div>
+                      ) : (
+                        <span
+                          className="text-content-tertiary text-[8px] px-1 opacity-0 group-hover:opacity-40 hover:!opacity-100 cursor-pointer rounded hover:bg-theme-elevated"
+                          onDoubleClick={(e) => { e.stopPropagation(); handleCommentDoubleClick(pattern) }}
+                          title="Double-click to add note"
+                        >💬</span>
                       )}
                       {onEditWorkout && (
                         <button
