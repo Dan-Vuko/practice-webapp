@@ -329,10 +329,10 @@ const CHORDS_BASE: Record<string, Record<string, Structure>> = {
   },
   'Barry Harris System': {
     sixth_diminished: {
-      name: 'Major 6th Diminished (Parent Scale)',
+      name: 'Major — 6 on Root',
       intervals: [0, 2, 4, 5, 7, 8, 9, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
       colors: [
-        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // R (0) - Maj6
+        { bgColor: 'bg-blue-500', textColor: 'text-white', ringClassName: 'ring-yellow-400' },   // R (0) - Maj6 root
         { bgColor: 'bg-red-500', textColor: 'text-white' },    // 2 (2) - Dim7
         { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 3 (4) - Maj6
         { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4 (5) - Dim7
@@ -340,6 +340,118 @@ const CHORDS_BASE: Record<string, Record<string, Structure>> = {
         { bgColor: 'bg-red-500', textColor: 'text-white' },    // b6 (8) - Dim7
         { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 6 (9) - Maj6
         { bgColor: 'bg-red-500', textColor: 'text-white' }     // 7 (11) - Dim7
+      ]
+    },
+    minor_sixth_diminished: {
+      name: 'Minor — m6 on Root',
+      intervals: [0, 2, 3, 5, 7, 8, 9, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-blue-500', textColor: 'text-white', ringClassName: 'ring-yellow-400' },   // R (0) - Min6 root
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 2 (2) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b3 (3) - Min6
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4 (5) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5 (7) - Min6
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b6 (8) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 6 (9) - Min6
+        { bgColor: 'bg-red-500', textColor: 'text-white' }     // 7 (11) - Dim7
+      ]
+    },
+    maj9_sixth: {
+      name: 'Maj9 — 6 on 5th',
+      intervals: [0, 2, 3, 4, 6, 7, 9, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-red-500', textColor: 'text-white', ringClassName: 'ring-yellow-400' },    // R (0) - Dim7 (chord root)
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 2 (2) - Maj6
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b3 (3) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 3 (4) - Maj6
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b5 (6) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5 (7) - Maj6 (6th root)
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 6 (9) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' }    // 7 (11) - Maj6
+      ]
+    },
+    m7_sixth: {
+      name: 'm7 — 6 on b3',
+      intervals: [0, 2, 3, 5, 7, 8, 10, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-blue-500', textColor: 'text-white', ringClassName: 'ring-yellow-400' },   // R (0) - Maj6 (chord root)
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 2 (2) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b3 (3) - Maj6 (6th root)
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4 (5) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5 (7) - Maj6
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b6 (8) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b7 (10) - Maj6
+        { bgColor: 'bg-red-500', textColor: 'text-white' }     // 7 (11) - Dim7
+      ]
+    },
+    m7b5_sixth: {
+      name: 'm7b5 — m6 on b3',
+      intervals: [0, 2, 3, 5, 6, 8, 10, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-blue-500', textColor: 'text-white', ringClassName: 'ring-yellow-400' },   // R (0) - Min6 (chord root)
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 2 (2) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b3 (3) - Min6 (6th root)
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4 (5) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b5 (6) - Min6
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b6 (8) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b7 (10) - Min6
+        { bgColor: 'bg-red-500', textColor: 'text-white' }     // 7 (11) - Dim7
+      ]
+    },
+    dom7sus4_sixth: {
+      name: '7sus4 — 6 on b7',
+      intervals: [0, 2, 3, 5, 6, 7, 9, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-red-500', textColor: 'text-white', ringClassName: 'ring-yellow-400' },    // R (0) - Dim7 (chord root)
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 2 (2) - Maj6
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b3 (3) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 4 (5) - Maj6
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b5 (6) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5 (7) - Maj6
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 6 (9) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' }    // b7 (10) - Maj6 (6th root)
+      ]
+    },
+    dom7susb9_sixth: {
+      name: '7susb9 — m6 on b7',
+      intervals: [0, 1, 3, 5, 6, 7, 9, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-red-500', textColor: 'text-white', ringClassName: 'ring-yellow-400' },    // R (0) - Dim7 (chord root)
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b2 (1) - Min6
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b3 (3) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 4 (5) - Min6
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b5 (6) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5 (7) - Min6
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 6 (9) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' }    // b7 (10) - Min6 (6th root)
+      ]
+    },
+    dom9_sixth: {
+      name: '9 — m6 on 5th',
+      intervals: [0, 2, 3, 4, 6, 7, 9, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-red-500', textColor: 'text-white', ringClassName: 'ring-yellow-400' },    // R (0) - Dim7 (chord root)
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 2 (2) - Min6
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b3 (3) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 3 (4) - Min6
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b5 (6) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5 (7) - Min6 (6th root)
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 6 (9) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' }    // b7 (10) - Min6
+      ]
+    },
+    dom7alt_sixth: {
+      name: '7alt — m6 on b2',
+      intervals: [0, 1, 3, 4, 6, 8, 9, 10].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-red-500', textColor: 'text-white', ringClassName: 'ring-yellow-400' },    // R (0) - Dim7 (chord root)
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b2 (1) - Min6 (6th root)
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b3 (3) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 3 (4) - Min6
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b5 (6) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b6 (8) - Min6
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 6 (9) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' }    // b7 (10) - Min6
       ]
     },
     dom7b5_diminished: {
@@ -354,6 +466,22 @@ const CHORDS_BASE: Record<string, Record<string, Structure>> = {
         { bgColor: 'bg-red-500', textColor: 'text-white' },    // b6 (8) - Dim7
         { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b7 (10) - Dom7b5
         { bgColor: 'bg-red-500', textColor: 'text-white' }     // 7 (11) - Dim7
+      ]
+    },
+  },
+  'Tetrad Pairs': {
+    phrygian_dom_bebop: {
+      name: 'Phrygian Dom Bebop (Dom7 + Dom7 on b2)',
+      intervals: [0, 1, 4, 5, 7, 8, 10, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-blue-500', textColor: 'text-white', ringClassName: 'ring-yellow-400' },   // R (0) - Dom7
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b2 (1) - Dom7(b2)
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 3 (4) - Dom7
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // 4 (5) - Dom7(b2)
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // 5 (7) - Dom7
+        { bgColor: 'bg-red-500', textColor: 'text-white' },    // b6 (8) - Dom7(b2)
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },   // b7 (10) - Dom7
+        { bgColor: 'bg-red-500', textColor: 'text-white' }     // 7 (11) - Dom7(b2)
       ]
     },
   },
@@ -671,13 +799,222 @@ const FIVE_NOTE_CHORDS: Record<string, Record<string, Structure>> = {
   }
 };
 
+// Chromatic scale helpers
+const ALL_12 = [
+  { interval: 0, name: 'R' }, { interval: 1, name: 'b2' }, { interval: 2, name: '2' },
+  { interval: 3, name: 'b3' }, { interval: 4, name: '3' }, { interval: 5, name: '4' },
+  { interval: 6, name: 'b5' }, { interval: 7, name: '5' }, { interval: 8, name: 'b6' },
+  { interval: 9, name: '6' }, { interval: 10, name: 'b7' }, { interval: 11, name: '7' },
+];
+const W: Color = { bgColor: 'bg-white', textColor: 'text-black' };
+const G: Color = { bgColor: 'bg-gray-400', textColor: 'text-black' };
+const DG: Color = { bgColor: 'bg-gray-600', textColor: 'text-white' };
+const B: Color = { bgColor: 'bg-gray-900', textColor: 'text-white' };
+// Symbol-only: transparent bg, symbol rendered in white/grey/dark-grey
+// Dim I = Aluminum (white), Dim II = Electric Blue, Dim III = Vibrant Red
+const ALUM: Color = { bgColor: 'bg-transparent', textColor: 'text-[#D8DDE1]' };
+// Ringed variants (hollow ring around the symbol)
+const ALUM_R: Color = { bgColor: 'bg-transparent', textColor: 'text-[#D8DDE1]', ringClassName: 'ring-[#D8DDE1]' };
+// Electric blue / Vibrant red
+const LAPIS: Color = { bgColor: 'bg-transparent', textColor: 'text-[#0080FF]' };
+const IRON: Color = { bgColor: 'bg-transparent', textColor: 'text-[#FF2020]' };
+const LAPIS_R: Color = { bgColor: 'bg-transparent', textColor: 'text-[#0080FF]', ringClassName: 'ring-[#0080FF]' };
+const IRON_R: Color = { bgColor: 'bg-transparent', textColor: 'text-[#FF2020]', ringClassName: 'ring-[#FF2020]' };
+
+const CHROMATIC_SCALES: Record<string, Record<string, Structure>> = {
+  'Chromatic: Binary (B/W)': {
+    chromatic_major: {
+      name: 'Major Highlight',
+      intervals: ALL_12,
+      //        R  b2  2  b3  3   4  b5  5  b6  6  b7  7
+      colors: [ W, B,  W, B,  W,  W, B,  W, B,  W, B,  W ],
+    },
+    chromatic_minor: {
+      name: 'Natural Minor Highlight',
+      intervals: ALL_12,
+      //        R  b2  2  b3  3   4  b5  5  b6  6  b7  7
+      colors: [ W, B,  W, W,  B,  W, B,  W, W,  B, W,  B ],
+    },
+    chromatic_wholetone: {
+      name: 'Whole-Tone Split (Mod 2)',
+      intervals: ALL_12,
+      //        R  b2  2  b3  3   4  b5  5  b6  6  b7  7
+      colors: [ W, B,  W, B,  W,  B, W,  B, W,  B, W,  B ],
+    },
+    chromatic_pent_major: {
+      name: 'Pentatonic Major Highlight',
+      intervals: ALL_12,
+      //        R  b2  2  b3  3   4  b5  5  b6  6  b7  7
+      colors: [ W, B,  W, B,  W,  B, B,  W, B,  W, B,  B ],
+    },
+    chromatic_pent_minor: {
+      name: 'Pentatonic Minor Highlight',
+      intervals: ALL_12,
+      //        R  b2  2  b3  3   4  b5  5  b6  6  b7  7
+      colors: [ W, B,  B, W,  B,  W, B,  W, B,  B, W,  B ],
+    },
+    chromatic_open_strings: {
+      name: 'Open String Notes (R-5-2)',
+      intervals: ALL_12,
+      //        R  b2  2  b3  3   4  b5  5  b6  6  b7  7
+      colors: [ W, B,  W, B,  B,  B, B,  W, B,  B, B,  B ],
+    },
+  },
+  'Chromatic: Ternary (B/W/G)': {
+    chromatic_dim_axis: {
+      name: 'Diminished Axis (Mod 3)',
+      intervals: ALL_12,
+      // 3 dim7 chords: {R,b3,b5,6}=W / {b2,3,5,b7}=G / {2,4,b6,7}=B
+      //        R  b2  2  b3  3   4  b5  5  b6  6  b7  7
+      colors: [ W, G,  B, W,  G,  B, W,  G, B,  W, G,  B ],
+    },
+    chromatic_aug_axis: {
+      name: 'Augmented Axis (Mod 4)',
+      intervals: ALL_12,
+      // 4 aug triads: {R,3,b6}=W / {b2,4,6}=light grey / {2,b5,b7}=dark grey / {b3,5,7}=B
+      //        R   b2  2   b3  3   4   b5  5   b6  6   b7  7
+      colors: [ W,  G,  DG, B,  W,  G,  DG, B,  W,  G,  DG, B ],
+    },
+    chromatic_pent_layers: {
+      name: 'Pentatonic → Diatonic → Chromatic',
+      intervals: ALL_12,
+      // Pentatonic=W / Diatonic extensions(4,7)=G / Chromatic=B
+      //        R  b2  2  b3  3   4  b5  5  b6  6  b7  7
+      colors: [ W, B,  W, B,  W,  G, B,  W, B,  W, B,  G ],
+    },
+    chromatic_triad_layers: {
+      name: 'Triad → Scale → Chromatic',
+      intervals: ALL_12,
+      // Triad(R,3,5)=W / Other diatonic(2,4,6,7)=G / Chromatic=B
+      //        R  b2  2  b3  3   4  b5  5  b6  6  b7  7
+      colors: [ W, B,  G, B,  W,  G, B,  W, B,  G, B,  G ],
+    },
+    chromatic_consonance: {
+      name: 'Interval Class (Consonance Tiers)',
+      intervals: ALL_12,
+      // Perfect(R,4,5)=W / Imperfect(b3,3,b6,6)=G / Dissonant(b2,2,b5,b7,7)=B
+      //        R  b2  2  b3  3   4  b5  5  b6  6  b7  7
+      colors: [ W, B,  B, G,  G,  W, B,  W, G,  G, B,  B ],
+    },
+    chromatic_tonnetz: {
+      name: 'Tonnetz (Circle of Fifths Proximity)',
+      intervals: ALL_12,
+      // Distance on CoF: {R,5,4}=W(0-1) / {2,b7,6,b3}=G(2-3) / {3,b6,7,b2,b5}=B(4-6)
+      //        R  b2  2  b3  3   4  b5  5  b6  6  b7  7
+      colors: [ W, B,  G, G,  B,  W, B,  W, B,  G, G,  B ],
+    },
+  },
+  'Chromatic: Dot Map': {
+    chromatic_dim_dots: {
+      name: 'Diminished Axis (Mod 3) — Dots',
+      intervals: ALL_12,
+      //        R  b2  2  b3  3   4  b5  5  b6  6  b7  7
+      colors: [ W, G,  B, W,  G,  B, W,  G, B,  W, G,  B ],
+      dotSize: 'small' as const,
+    },
+  },
+  'Chromatic: Symbol Map': {
+    // Each dim7 group shares a color (W/G/B). Within each group, 4 symbols distinguish the 4 members.
+    // Symbol position: 1st member of each dim7 → symbol 1, 2nd → symbol 2, etc.
+    // Dim I: R(0), b3(3), b5(6), 6(9) | Dim II: b2(1), 3(4), 5(7), b7(10) | Dim III: 2(2), 4(5), b6(8), 7(11)
+    dim_celestial: {
+      name: 'Celestial (●  ✦  ☾  ○)',
+      intervals: [
+        // Root gets biggest/most prominent, decreasing through dim7 group
+        { interval: 0, name: '●' },  { interval: 1, name: '●' },  { interval: 2, name: '●' },
+        { interval: 3, name: '✦' },  { interval: 4, name: '✦' },  { interval: 5, name: '✦' },
+        { interval: 6, name: '☾' },  { interval: 7, name: '☾' },  { interval: 8, name: '☾' },
+        { interval: 9, name: '○' },  { interval: 10, name: '○' }, { interval: 11, name: '○' },
+      ],
+      colors: [ ALUM, LAPIS, IRON, ALUM, LAPIS, IRON, ALUM, LAPIS, IRON, ALUM, LAPIS, IRON ],
+    },
+    dim_minimal: {
+      name: 'Minimal Marks (⁘  ∴  ∶  ·)',
+      intervals: [
+        // Root = 4 dots (biggest), decreasing to 1 dot
+        { interval: 0, name: '⁘' },  { interval: 1, name: '⁘' },  { interval: 2, name: '⁘' },
+        { interval: 3, name: '∴' },  { interval: 4, name: '∴' },  { interval: 5, name: '∴' },
+        { interval: 6, name: '∶' },  { interval: 7, name: '∶' },  { interval: 8, name: '∶' },
+        { interval: 9, name: '·' },  { interval: 10, name: '·' }, { interval: 11, name: '·' },
+      ],
+      colors: [ ALUM, LAPIS, IRON, ALUM, LAPIS, IRON, ALUM, LAPIS, IRON, ALUM, LAPIS, IRON ],
+    },
+    dim_minimal_rring: {
+      name: 'Minimal + Root Ring (⁘  ∴  ∶  ·)',
+      intervals: [
+        { interval: 0, name: '⁘' },  { interval: 1, name: '⁘' },  { interval: 2, name: '⁘' },
+        { interval: 3, name: '∴' },  { interval: 4, name: '∴' },  { interval: 5, name: '∴' },
+        { interval: 6, name: '∶' },  { interval: 7, name: '∶' },  { interval: 8, name: '∶' },
+        { interval: 9, name: '·' },  { interval: 10, name: '·' }, { interval: 11, name: '·' },
+      ],
+      colors: [ ALUM_R, LAPIS, IRON, ALUM, LAPIS, IRON, ALUM, LAPIS, IRON, ALUM, LAPIS, IRON ],
+    },
+    dim_minimal_metal_ring: {
+      name: 'Minimal + R/5 Ring (⁘  ∴  ∶  ·)',
+      intervals: [
+        { interval: 0, name: '⁘' },  { interval: 1, name: '⁘' },  { interval: 2, name: '⁘' },
+        { interval: 3, name: '∴' },  { interval: 4, name: '∴' },  { interval: 5, name: '∴' },
+        { interval: 6, name: '∶' },  { interval: 7, name: '∶' },  { interval: 8, name: '∶' },
+        { interval: 9, name: '·' },  { interval: 10, name: '·' }, { interval: 11, name: '·' },
+      ],
+      //              R       b2     2       b3     3      4       b5     5        b6      6      b7     7
+      colors: [ ALUM_R, LAPIS, IRON, ALUM, LAPIS, IRON, ALUM, LAPIS_R, IRON, ALUM, LAPIS, IRON ],
+    },
+    dim_minimal_metal_r25: {
+      name: 'Minimal + R/2/5 Ring (⁘  ∴  ∶  ·)',
+      intervals: [
+        { interval: 0, name: '⁘' },  { interval: 1, name: '⁘' },  { interval: 2, name: '⁘' },
+        { interval: 3, name: '∴' },  { interval: 4, name: '∴' },  { interval: 5, name: '∴' },
+        { interval: 6, name: '∶' },  { interval: 7, name: '∶' },  { interval: 8, name: '∶' },
+        { interval: 9, name: '·' },  { interval: 10, name: '·' }, { interval: 11, name: '·' },
+      ],
+      //              R       b2     2         b3     3      4       b5     5        b6      6      b7     7
+      colors: [ ALUM_R, LAPIS, IRON_R, ALUM, LAPIS, IRON, ALUM, LAPIS_R, IRON, ALUM, LAPIS, IRON ],
+    },
+    dim_concentric: {
+      name: 'Concentric (⊙  ○  ●  ·)',
+      intervals: [
+        // Root = most prominent (ring+dot), decreasing to smallest dot
+        { interval: 0, name: '⊙' },  { interval: 1, name: '⊙' },  { interval: 2, name: '⊙' },
+        { interval: 3, name: '○' },  { interval: 4, name: '○' },  { interval: 5, name: '○' },
+        { interval: 6, name: '●' },  { interval: 7, name: '●' },  { interval: 8, name: '●' },
+        { interval: 9, name: '·' },  { interval: 10, name: '·' }, { interval: 11, name: '·' },
+      ],
+      colors: [ ALUM, LAPIS, IRON, ALUM, LAPIS, IRON, ALUM, LAPIS, IRON, ALUM, LAPIS, IRON ],
+    },
+  },
+  'Chromatic: Scale Filter': {
+    // Major scale from selected root, but symbols/colors always locked to D's diminished axis.
+    // Change root in UI to change key — the dim axis markers stay fixed.
+    sf_major: {
+      name: 'Major Scale (D Dim Axis)',
+      intervals: [
+        { interval: 0, name: 'R' }, { interval: 2, name: '2' }, { interval: 4, name: '3' },
+        { interval: 5, name: '4' }, { interval: 7, name: '5' }, { interval: 9, name: '6' },
+        { interval: 11, name: '7' },
+      ],
+      colors: [ ALUM, ALUM, ALUM, ALUM, ALUM, ALUM, ALUM ], // placeholder, fixedMap overrides
+      fixedRoot: 'D',
+      fixedMap: [
+        // D=0   Eb=1   E=2    F=3    F#=4   G=5    Ab=6   A=7    Bb=8   B=9    C=10   C#=11
+        { name: '⁘', color: ALUM },  { name: '⁘', color: LAPIS }, { name: '⁘', color: IRON },
+        { name: '∴', color: ALUM },  { name: '∴', color: LAPIS }, { name: '∴', color: IRON },
+        { name: '∶', color: ALUM },  { name: '∶', color: LAPIS }, { name: '∶', color: IRON },
+        { name: '·', color: ALUM },  { name: '·', color: LAPIS }, { name: '·', color: IRON },
+      ],
+    },
+  },
+};
+
 // Flatten structures for easy access
 export const STRUCTURES: Record<string, Structure> = {};
 Object.values(CHORDS_BASE).forEach(category => Object.entries(category).forEach(([key, value]) => STRUCTURES[key] = value));
 Object.values(FIVE_NOTE_CHORDS).forEach(category => Object.entries(category).forEach(([key, value]) => STRUCTURES[key] = value));
+Object.values(CHROMATIC_SCALES).forEach(category => Object.entries(category).forEach(([key, value]) => STRUCTURES[key] = value));
 
 // Assign colors to all structures
 Object.values(CHORDS_BASE).forEach(category => Object.values(category).forEach(assignColors));
 Object.values(FIVE_NOTE_CHORDS).forEach(category => Object.values(category).forEach(assignColors));
+Object.values(CHROMATIC_SCALES).forEach(category => Object.values(category).forEach(assignColors));
 
-export const CATEGORIZED_STRUCTURES = { ...CHORDS_BASE, ...FIVE_NOTE_CHORDS };
+export const CATEGORIZED_STRUCTURES = { ...CHORDS_BASE, ...FIVE_NOTE_CHORDS, ...CHROMATIC_SCALES };

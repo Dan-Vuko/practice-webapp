@@ -19,8 +19,9 @@ export function TopNav({ currentApp, onSwitchApp }: TopNavProps) {
         <div className="flex items-center justify-between h-12">
           {/* App Tabs */}
           <div className="flex gap-1">
-            <button
-              onClick={() => onSwitchApp('speedbuilder')}
+            <a
+              href="#speedbuilder"
+              onClick={(e) => { e.preventDefault(); onSwitchApp('speedbuilder') }}
               className={`px-4 py-1.5 rounded-lg font-medium transition-all ${
                 currentApp === 'speedbuilder'
                   ? 'bg-accent text-content-primary'
@@ -28,9 +29,10 @@ export function TopNav({ currentApp, onSwitchApp }: TopNavProps) {
               }`}
             >
               Speed Builder
-            </button>
-            <button
-              onClick={() => onSwitchApp('fretmaster')}
+            </a>
+            <a
+              href="#fretmaster"
+              onClick={(e) => { e.preventDefault(); onSwitchApp('fretmaster') }}
               className={`px-4 py-1.5 rounded-lg font-medium transition-all ${
                 currentApp === 'fretmaster'
                   ? 'bg-accent2 text-content-primary'
@@ -38,7 +40,7 @@ export function TopNav({ currentApp, onSwitchApp }: TopNavProps) {
               }`}
             >
               FretMaster
-            </button>
+            </a>
           </div>
 
           {/* Right side controls */}

@@ -24,12 +24,13 @@ interface WorkoutEditorProps {
   pattern: PatternItem
   workoutConfigId?: string
   onClose: () => void
-  onSave: (configId: string) => void
+  onSave: (configId: string, patternName?: string) => void
 }
 
 export function WorkoutEditor({ pattern, workoutConfigId, onClose, onSave }: WorkoutEditorProps) {
   const [config, setConfig] = useState<WorkoutConfig | null>(null)
   const [configName, setConfigName] = useState('')
+  const [patternName, setPatternName] = useState(pattern.name)
   const [showSaveAsModal, setShowSaveAsModal] = useState(false)
   const [newTemplateName, setNewTemplateName] = useState('')
   const [showCustomTypeInput, setShowCustomTypeInput] = useState<string | null>(null)
@@ -152,7 +153,7 @@ export function WorkoutEditor({ pattern, workoutConfigId, onClose, onSave }: Wor
     }
 
     saveWorkoutConfig(updatedConfig)
-    onSave(updatedConfig.id)
+    onSave(updatedConfig.id, patternName !== pattern.name ? patternName : undefined)
     onClose()
   }
 
@@ -460,8 +461,15 @@ export function WorkoutEditor({ pattern, workoutConfigId, onClose, onSave }: Wor
 
         {/* Footer */}
         <div className="p-4 border-t border-border flex items-center justify-between">
-          <div className="text-xs text-content-tertiary">
-            Pattern: {pattern.name} ({pattern.current_bpm} → {pattern.target_bpm} BPM)
+          <div className="flex items-center gap-2 text-xs text-content-tertiary">
+            <span>Pattern:</span>
+            <input
+              type="text"
+              value={patternName}
+              onChange={e => setPatternName(e.target.value)}
+              className="bg-theme-elevated text-content-primary px-2 py-1 rounded text-xs font-semibold"
+            />
+            <span>({pattern.current_bpm} → {pattern.target_bpm} BPM)</span>
           </div>
           <div className="flex gap-3">
             <button

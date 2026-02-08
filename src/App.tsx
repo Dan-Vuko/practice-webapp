@@ -28,14 +28,9 @@ function App() {
   const [editingWorkoutPattern, setEditingWorkoutPattern] = useState<PatternItem | null>(null)
   const [workoutStartTime, setWorkoutStartTime] = useState<Date | null>(null)
   const [workoutStartBpm, setWorkoutStartBpm] = useState<number>(0)
-  const [sessionReps, setSessionReps] = useState<number>(0)
-
   // Workout automation
   const [exerciseTimes, setExerciseTimes] = useState<Record<number, number>>({}) // exerciseIndex -> seconds elapsed
   const [, setBeatCount] = useState(0)
-  const [clickCount, setClickCount] = useState(0) // Track total clicks for rep counting
-  const lastClickCountRef = useRef(0) // Track last processed click count
-  const lastModeRef = useRef({ microBurst: false, subdivision: 'quarter' as Subdivision })
   const exerciseStartTimeRef = useRef<number | null>(null)
   const lastExerciseIndexRef = useRef(0)
   const [variablePushMode, setVariablePushMode] = useState(false)
@@ -64,7 +59,7 @@ function App() {
   // Metronome beat and click callbacks - only set up once
   useEffect(() => {
     metronome.clearBeatCallbacks()
-    metronome.clearClickCallbacks()
+
 
     metronome.onBeat((beat) => {
       setCurrentBeat(beat)
@@ -124,14 +119,9 @@ function App() {
       })
     })
 
-    // Track every click for rep counting
-    metronome.onClick(() => {
-      setClickCount(prev => prev + 1)
-    })
-
     return () => {
       metronome.clearBeatCallbacks()
-      metronome.clearClickCallbacks()
+  
       metronome.dispose()
     }
   }, [metronome])
@@ -158,19 +148,15 @@ function App() {
     const updateTime = () => {
       if (!isPlaying) return
 
-      if (exerciseStartTimeRef.current === null) {
-        exerciseStartTimeRef.current = Date.now()
-      }
-
-      // Reset if exercise changed
-      if (lastExerciseIndexRef.current !== currentExerciseIndex) {
-        exerciseStartTimeRef.current = Date.now()
-        lastExerciseIndexRef.current = currentExerciseIndex
-      }
-
-      const elapsedSeconds = Math.floor((Date.now() - exerciseStartTimeRef.current) / 1000)
-
       setExerciseTimes(prev => {
+        // On first tick or exercise change, initialize start time offset by accumulated time
+        if (exerciseStartTimeRef.current === null || lastExerciseIndexRef.current !== currentExerciseIndex) {
+          const previousSeconds = prev[currentExerciseIndex] || 0
+          exerciseStartTimeRef.current = Date.now() - (previousSeconds * 1000)
+          lastExerciseIndexRef.current = currentExerciseIndex
+        }
+
+        const elapsedSeconds = Math.floor((Date.now() - exerciseStartTimeRef.current) / 1000)
         const currentTime = prev[currentExerciseIndex] || 0
 
         // Only update if time actually changed
@@ -186,6 +172,7 @@ function App() {
               metronome.stop()
               setIsPlaying(false)
               setVariablePushMode(false)
+              exerciseStartTimeRef.current = null
               return prev
             }
           }
@@ -209,29 +196,6 @@ function App() {
       if (animationFrame) cancelAnimationFrame(animationFrame)
     }
   }, [isPlaying, currentExerciseIndex, sessionExercises, metronome])
-
-  // Update rep count based on clicks (incremental, not recalculated)
-  useEffect(() => {
-    // Only process new clicks since last update
-    const newClicks = clickCount - lastClickCountRef.current
-    if (newClicks <= 0) return
-
-    const clicksPerBeat = subdivision === 'quarter' ? 1 : subdivision === 'eighth' ? 2 : 4
-    const clicksPerRep = microBurstMode ? clicksPerBeat * 2 : clicksPerBeat
-
-    // Calculate how many new reps we've earned from the new clicks
-    const previousRemainder = lastClickCountRef.current % clicksPerRep
-    const totalClicksForThisMode = previousRemainder + newClicks
-    const newReps = Math.floor(totalClicksForThisMode / clicksPerRep)
-
-    if (newReps > 0) {
-      setSessionReps(prev => prev + newReps)
-    }
-
-    // Update refs
-    lastClickCountRef.current = clickCount
-    lastModeRef.current = { microBurst: microBurstMode, subdivision }
-  }, [clickCount, subdivision, microBurstMode])
 
   const handleAddPattern = async () => {
     const pattern = PATTERNS.find(p => p.id === newPatternId)
@@ -275,11 +239,9 @@ function App() {
     setWorkoutStartTime(new Date())
     setWorkoutStartBpm(pattern.current_bpm)
 
-    // Reset exercise times and reps
+    // Reset exercise times
     setExerciseTimes({})
-    setSessionReps(0)
     setBeatCount(0)
-    setClickCount(0)
     exerciseStartTimeRef.current = null
     lastExerciseIndexRef.current = 0
   }
@@ -289,14 +251,16 @@ function App() {
     setShowWorkoutEditor(true)
   }
 
-  const handleSaveWorkoutConfig = (configId: string) => {
-    // Update pattern in localStorage with new workoutConfigId
+  const handleSaveWorkoutConfig = (configId: string, patternName?: string) => {
+    // Update pattern in localStorage with new workoutConfigId (and optionally name)
     const storedData = localStorage.getItem('patternDatabase')
     if (storedData && editingWorkoutPattern) {
       const items = JSON.parse(storedData)
       const updatedItems = items.map((item: any) => {
         if (item.id === editingWorkoutPattern.id && !item.isFolder) {
-          return { ...item, workoutConfigId: configId }
+          const updated = { ...item, workoutConfigId: configId }
+          if (patternName) updated.name = patternName
+          return updated
         }
         return item
       })
@@ -304,7 +268,7 @@ function App() {
 
       // Update selectedPattern if it's the same pattern
       if (selectedPattern && selectedPattern.id === editingWorkoutPattern.id) {
-        const updatedPattern = { ...selectedPattern, workoutConfigId: configId }
+        const updatedPattern = { ...selectedPattern, workoutConfigId: configId, ...(patternName ? { name: patternName } : {}) }
         setSelectedPattern(updatedPattern)
 
         // Reload workout with new config
@@ -344,7 +308,6 @@ function App() {
       practice_minutes: Math.round(completedExercises),
       starting_bpm: workoutStartBpm,
       ending_bpm: metronome.getTempo(),
-      total_reps: sessionReps,
       exercises: sessionExercises.map((ex, idx) => ({
         type: ex.type,
         tempo: ex.startingTempo,
@@ -383,7 +346,6 @@ function App() {
             ...item,
             total_sessions: item.total_sessions + 1,
             total_practice_minutes: item.total_practice_minutes + Math.round(completedExercises),
-            total_reps: item.total_reps + sessionReps,
             last_practiced: new Date().toISOString()
           }
         }
@@ -400,15 +362,13 @@ function App() {
 
     console.log('Workout saved to localStorage key: workoutHistory')
     console.log('Latest workout:', newWorkout)
-    alert(`Workout saved successfully! ${sessionReps} reps completed.\n\nSaved to localStorage key: "workoutHistory"`)
+    alert(`Workout saved successfully! ${Math.round(completedExercises)} minutes practiced.\n\nSaved to localStorage key: "workoutHistory"`)
 
     // Reset workout tracking
     setWorkoutStartTime(new Date())
     setWorkoutStartBpm(metronome.getTempo())
     setExerciseTimes({})
-    setSessionReps(0)
     setBeatCount(0)
-    setClickCount(0)
     exerciseStartTimeRef.current = null
     lastExerciseIndexRef.current = 0
   }
@@ -552,7 +512,6 @@ function App() {
       metronome.setMuted(false)
     }
 
-    // Reset beat counter (but NOT click counter - we want reps to accumulate across exercises)
     setBeatCount(0)
 
     // Start metronome if not already playing
@@ -566,6 +525,7 @@ function App() {
     if (isPlaying) {
       metronome.stop()
       setIsPlaying(false)
+      exerciseStartTimeRef.current = null // Reset so it recalculates offset on resume
     } else {
       await metronome.start()
       setIsPlaying(true)
@@ -820,15 +780,22 @@ function App() {
                   </div>
                 </div>
 
-                {/* Session Reps Counter */}
+                {/* Session Time Counter */}
                 <div className="mb-4 p-3 bg-accent-bg border border-accent-border rounded-lg">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-content-muted">Session Reps:</span>
-                    <span className="text-2xl font-bold text-accent-muted">{sessionReps}</span>
+                    <span className="text-sm text-content-muted">Session Time:</span>
+                    <span className="text-2xl font-bold text-accent-muted">
+                      {(() => {
+                        const totalSecs = Object.values(exerciseTimes).reduce((sum, t) => sum + t, 0)
+                        const mins = Math.floor(totalSecs / 60)
+                        const secs = totalSecs % 60
+                        return `${mins}:${secs.toString().padStart(2, '0')}`
+                      })()}
+                    </span>
                   </div>
                   {selectedPattern && selectedPattern.total_sessions > 0 && (
                     <div className="text-xs text-content-tertiary mt-1 text-right">
-                      Avg: {Math.round(selectedPattern.total_reps / selectedPattern.total_sessions)}/session
+                      Total: {selectedPattern.total_practice_minutes} min across {selectedPattern.total_sessions} sessions
                     </div>
                   )}
                 </div>

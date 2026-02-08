@@ -261,7 +261,7 @@ const App: React.FC = () => {
                 case 'degree': label = ROMAN_DEGREES[globInt]; break;
                 default: label = INTERVAL_NAMES[globInt as number]; break;
               }
-              notes[`${stringIndex}-${fret}`] = { label, ...color };
+              notes[`${stringIndex}-${fret}`] = { label, ...color, dotSize: structure.dotSize };
             }
           }
         });
@@ -272,21 +272,32 @@ const App: React.FC = () => {
       structure.intervals.forEach((interval, index) => {
           structInfo[interval.interval % 12] = { name: interval.name, color: structure.colors[index] };
       });
+      // Build fixed root lookup if structure has fixedRoot
+      const fixedMapLookup: Record<number, { name: string, color: Color }> | null =
+        structure.fixedRoot && structure.fixedMap
+          ? Object.fromEntries(structure.fixedMap.map((entry, i) => [i, entry]))
+          : null;
       tuning?.strings?.forEach((openNote, stringIndex) => {
         for (let fret = 0; fret <= FRET_COUNT; fret++) {
           const noteInfo = getNoteOnFret(openNote, fret);
           const numericInterval = getIntervalFromRoot(noteInfo.name, fretboard.rootNote);
           if (fretboard.visibleIntervals.has(numericInterval)) {
-            const info = structInfo[numericInterval];
+            // If fixedRoot, look up symbol/color by interval from fixedRoot
+            const fixedInterval = structure.fixedRoot ? getIntervalFromRoot(noteInfo.name, structure.fixedRoot) : numericInterval;
+            const info = fixedMapLookup ? fixedMapLookup[fixedInterval] : structInfo[numericInterval];
             const color = info ? info.color : { bgColor: 'bg-slate-600', textColor: 'text-white' };
             let label: string;
-            switch (fretboard.structureLabelType) {
-              case 'noteName': label = noteInfo.displayName; break;
-              case 'sargam': label = SARGAM_NAMES[numericInterval]; break;
-              case 'degree': label = ROMAN_DEGREES[numericInterval]; break;
-              default: label = info ? info.name : INTERVAL_NAMES[numericInterval as number]; break;
+            if (fixedMapLookup && info) {
+              label = info.name;
+            } else {
+              switch (fretboard.structureLabelType) {
+                case 'noteName': label = noteInfo.displayName; break;
+                case 'sargam': label = SARGAM_NAMES[numericInterval]; break;
+                case 'degree': label = ROMAN_DEGREES[numericInterval]; break;
+                default: label = info ? info.name : INTERVAL_NAMES[numericInterval as number]; break;
+              }
             }
-            notes[`${stringIndex}-${fret}`] = { label, ...color };
+            notes[`${stringIndex}-${fret}`] = { label, ...color, dotSize: structure.dotSize };
           }
         }
       });

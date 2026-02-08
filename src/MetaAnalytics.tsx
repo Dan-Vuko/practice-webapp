@@ -555,10 +555,10 @@ export function MetaAnalytics({ onClose }: MetaAnalyticsProps) {
                           </>
                         )}
                       </div>
-                      {session.total_reps > 0 && (
+                      {session.practice_minutes > 0 && (
                         <div>
-                          <span className="text-gray-400">Reps:</span>
-                          <span className="text-yellow-400 ml-1">{session.total_reps}</span>
+                          <span className="text-gray-400">Practice:</span>
+                          <span className="text-yellow-400 ml-1">{session.practice_minutes} min</span>
                         </div>
                       )}
                     </div>

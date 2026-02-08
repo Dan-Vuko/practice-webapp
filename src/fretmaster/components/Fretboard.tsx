@@ -172,9 +172,12 @@ const Fretboard: React.FC<FretboardProps> = ({ tuning, highlightedNotes, onNoteC
                       onClick={() => onNoteClick(stringIndex, fret)}
                     >
                       {!highlighted && <div className="w-3 h-3 rounded-full bg-white/5 opacity-0 group-hover:opacity-100 transition-all scale-50 group-hover:scale-100"></div>}
-                      {highlighted && (
-                        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-[10px] sm:text-xs shadow-xl transform transition-all duration-300 animate-in fade-in zoom-in ${highlighted.bgColor} ${highlighted.textColor} ${highlighted.ringClassName ? `ring-2 ${highlighted.ringClassName}` : ''}`}>
-                          <span className="drop-shadow-sm">{highlighted.label}</span>
+                      {highlighted && highlighted.dotSize === 'small' && (
+                        <div className={`w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full shadow-xl transform transition-all duration-300 animate-in fade-in zoom-in ${highlighted.bgColor} ${highlighted.ringClassName ? `ring-2 ${highlighted.ringClassName}` : ''}`} />
+                      )}
+                      {highlighted && highlighted.dotSize !== 'small' && (
+                        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold ${highlighted.bgColor === 'bg-transparent' ? 'text-lg sm:text-xl' : 'text-[10px] sm:text-xs'} ${highlighted.bgColor === 'bg-transparent' ? '' : 'shadow-xl'} transform transition-all duration-300 animate-in fade-in zoom-in ${highlighted.bgColor} ${highlighted.textColor} ${highlighted.ringClassName ? `ring-2 ${highlighted.ringClassName}` : ''}`}>
+                          <span className={highlighted.bgColor === 'bg-transparent' ? 'drop-shadow-[0_0_4px_rgba(0,0,0,0.9)]' : 'drop-shadow-sm'} style={highlighted.bgColor === 'bg-transparent' ? { textShadow: '0 0 6px rgba(0,0,0,0.8), 0 0 2px rgba(0,0,0,1)' } : undefined}>{highlighted.label}</span>
                         </div>
                       )}
                     </div>

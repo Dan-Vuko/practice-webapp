@@ -98,7 +98,7 @@ export interface PatternItem {
   target_bpm: number
   total_sessions: number
   total_practice_minutes: number
-  total_reps: number
+  total_reps: number  // deprecated, kept for data compat
   last_practiced: string
   // Workout configuration
   workoutConfigId?: string
@@ -138,6 +138,10 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
   const [editingBpmId, setEditingBpmId] = useState<string | null>(null)
   const [editingBpmType, setEditingBpmType] = useState<'current' | 'target' | null>(null)
   const [editBpmValue, setEditBpmValue] = useState<number>(0)
+
+  // Name editing
+  const [editingNameId, setEditingNameId] = useState<string | null>(null)
+  const [editNameValue, setEditNameValue] = useState('')
 
   useEffect(() => {
     loadDatabase()
@@ -268,28 +272,43 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
     setShowAddModal(false)
   }
 
+  const collectDescendantIds = (folderId: string): Set<string> => {
+    const ids = new Set<string>()
+    const childFolders = getChildFolders(folderId)
+    for (const child of childFolders) {
+      ids.add(child.id)
+      for (const id of collectDescendantIds(child.id)) {
+        ids.add(id)
+      }
+    }
+    return ids
+  }
+
   const handleDeleteItem = (item: TreeItem) => {
     if (item.isFolder) {
-      // Check if folder has children
-      const hasChildren = items.some(i => !i.isFolder && i.folderId === item.id) ||
-                          items.some(i => i.isFolder && i.parentId === item.id)
+      const descendantFolderIds = collectDescendantIds(item.id)
+      const allFolderIds = new Set([item.id, ...descendantFolderIds])
+      const hasChildren = items.some(i =>
+        (!i.isFolder && allFolderIds.has(i.folderId)) ||
+        (i.isFolder && i.parentId === item.id)
+      )
       if (hasChildren) {
         if (!confirm('This folder contains items. Delete anyway?')) return
       }
     }
 
     if (confirm(`Delete ${item.isFolder ? 'folder' : 'pattern'} "${item.name}"?`)) {
-      const newItems = items.filter(i => i.id !== item.id)
-      // Also delete children if folder
       if (item.isFolder) {
-        const filteredItems = newItems.filter(i => {
-          if (!i.isFolder && i.folderId === item.id) return false
-          if (i.isFolder && i.parentId === item.id) return false
+        const descendantFolderIds = collectDescendantIds(item.id)
+        const allFolderIds = new Set([item.id, ...descendantFolderIds])
+        const filteredItems = items.filter(i => {
+          if (allFolderIds.has(i.id)) return false
+          if (!i.isFolder && allFolderIds.has(i.folderId)) return false
           return true
         })
         saveDatabase(filteredItems)
       } else {
-        saveDatabase(newItems)
+        saveDatabase(items.filter(i => i.id !== item.id))
       }
     }
   }
@@ -344,6 +363,34 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
     }
   }
 
+  const handleNameDoubleClick = (item: TreeItem) => {
+    setEditingNameId(item.id)
+    setEditNameValue(item.name)
+  }
+
+  const handleNameSave = () => {
+    if (!editingNameId || !editNameValue.trim()) {
+      setEditingNameId(null)
+      return
+    }
+    const newItems = items.map(item => {
+      if (item.id === editingNameId) {
+        return { ...item, name: editNameValue.trim() }
+      }
+      return item
+    })
+    saveDatabase(newItems)
+    setEditingNameId(null)
+  }
+
+  const handleNameKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleNameSave()
+    } else if (e.key === 'Escape') {
+      setEditingNameId(null)
+    }
+  }
+
   const getFolders = (): PatternFolder[] => {
     return items.filter(item => item.isFolder) as PatternFolder[]
   }
@@ -354,6 +401,24 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
 
   const getChildFolders = (parentId: string): PatternFolder[] => {
     return items.filter(item => item.isFolder && item.parentId === parentId) as PatternFolder[]
+  }
+
+  const getFolderHierarchy = (parentId: string = 'root', depth: number = 0): Array<{folder: PatternFolder, depth: number}> => {
+    const children = getChildFolders(parentId)
+    const result: Array<{folder: PatternFolder, depth: number}> = []
+    for (const child of children) {
+      result.push({ folder: child, depth })
+      result.push(...getFolderHierarchy(child.id, depth + 1))
+    }
+    return result
+  }
+
+  const isDescendantOf = (folderId: string, ancestorId: string): boolean => {
+    const folder = items.find(i => i.isFolder && i.id === folderId) as PatternFolder | undefined
+    if (!folder) return false
+    if (folder.parentId === ancestorId) return true
+    if (folder.parentId === 'root' || !folder.parentId) return false
+    return isDescendantOf(folder.parentId, ancestorId)
   }
 
   const renderTree = (parentId: string = 'root', depth: number = 0) => {
@@ -377,7 +442,25 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                 <span className="text-content-secondary">
                   {isExpanded ? '📂' : '📁'}
                 </span>
-                <span className="text-content-primary font-semibold flex-1">{folder.name}</span>
+                {editingNameId === folder.id ? (
+                  <input
+                    type="text"
+                    value={editNameValue}
+                    onChange={(e) => setEditNameValue(e.target.value)}
+                    onBlur={handleNameSave}
+                    onKeyDown={handleNameKeyPress}
+                    className="text-content-primary font-semibold flex-1 bg-theme-elevated border border-border-hover rounded px-1 text-sm"
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <span
+                    className="text-content-primary font-semibold flex-1 cursor-pointer hover:underline"
+                    onDoubleClick={(e) => { e.stopPropagation(); handleNameDoubleClick(folder) }}
+                  >
+                    {folder.name}
+                  </span>
+                )}
                 <div className="opacity-0 group-hover:opacity-100 flex gap-1">
                   <button
                     onClick={(e) => {
@@ -389,6 +472,29 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                     className="text-xs px-2 py-1 bg-accent-hover hover:bg-accent-dark rounded text-content-primary"
                   >
                     + Add
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedFolderId(folder.id)
+                      setAddModalType('folder')
+                      setShowAddModal(true)
+                    }}
+                    className="text-xs px-2 py-1 bg-accent3-hover hover:bg-accent3-dark rounded text-content-primary"
+                    title="Add sub-folder"
+                  >
+                    + Folder
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setContextMenuItem(folder)
+                      setShowMoveModal(true)
+                    }}
+                    className="text-xs px-2 py-1 bg-accent3-hover hover:bg-accent3-dark rounded text-content-primary"
+                    title="Move folder"
+                  >
+                    ↔
                   </button>
                   <button
                     onClick={(e) => {
@@ -411,7 +517,7 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                     <div
                       key={pattern.id}
                       style={{ paddingLeft: `${(depth + 1) * 16}px` }}
-                      className={`flex items-center gap-1 py-0.5 px-1 cursor-pointer transition-colors group text-[9px] ${
+                      className={`flex items-center gap-2 py-1 px-1 cursor-pointer transition-colors group text-[10px] ${
                         selectedPatternId === pattern.id
                           ? 'bg-accent-bg border-l-2 border-accent'
                           : 'hover:bg-theme-elevated/30'
@@ -419,8 +525,27 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                       onClick={() => onSelectPattern(pattern)}
                     >
                       <span className="text-accent-muted text-[9px]">🎵</span>
-                      <span className="font-mono font-semibold text-accent3-muted w-16 truncate text-[10px]">{pattern.name}</span>
-                      <div className="flex-1 flex items-center gap-1 text-content-secondary">
+                      {editingNameId === pattern.id ? (
+                        <input
+                          type="text"
+                          value={editNameValue}
+                          onChange={(e) => setEditNameValue(e.target.value)}
+                          onBlur={handleNameSave}
+                          onKeyDown={handleNameKeyPress}
+                          className="font-mono font-semibold text-accent3-muted min-w-[80px] flex-1 bg-accent3-dark border border-accent3 rounded px-1 text-[10px]"
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <span
+                          className="font-mono font-semibold text-accent3-muted min-w-[80px] flex-1 truncate text-[10px] cursor-pointer hover:underline"
+                          onDoubleClick={(e) => { e.stopPropagation(); handleNameDoubleClick(pattern) }}
+                          title={pattern.name}
+                        >
+                          {pattern.name}
+                        </span>
+                      )}
+                      <div className="flex items-center gap-1.5 text-content-secondary shrink-0">
                         {editingBpmId === pattern.id && editingBpmType === 'current' ? (
                           <input
                             type="number"
@@ -428,12 +553,12 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                             onChange={(e) => setEditBpmValue(parseInt(e.target.value) || 0)}
                             onBlur={handleBpmSave}
                             onKeyDown={handleBpmKeyPress}
-                            className="w-8 bg-accent3-dark text-accent3-muted font-semibold border border-accent3 rounded px-0.5 text-[9px]"
+                            className="w-10 bg-accent3-dark text-accent3-muted font-semibold border border-accent3 rounded px-0.5 text-[10px]"
                             autoFocus
                           />
                         ) : (
                           <span
-                            className="text-accent3-muted font-semibold cursor-pointer hover:underline w-6"
+                            className="text-accent3-muted font-semibold cursor-pointer hover:underline"
                             onDoubleClick={() => handleBpmDoubleClick(pattern, 'current')}
                             title="Current BPM"
                           >
@@ -448,21 +573,20 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                             onChange={(e) => setEditBpmValue(parseInt(e.target.value) || 0)}
                             onBlur={handleBpmSave}
                             onKeyDown={handleBpmKeyPress}
-                            className="w-8 bg-accent2-bg text-accent2-muted font-semibold border border-accent2 rounded px-0.5 text-[9px]"
+                            className="w-10 bg-accent2-bg text-accent2-muted font-semibold border border-accent2 rounded px-0.5 text-[10px]"
                             autoFocus
                           />
                         ) : (
                           <span
-                            className="text-accent2-muted font-semibold cursor-pointer hover:underline w-6"
+                            className="text-accent2-muted font-semibold cursor-pointer hover:underline"
                             onDoubleClick={() => handleBpmDoubleClick(pattern, 'target')}
                             title="Target BPM"
                           >
                             {pattern.target_bpm}
                           </span>
                         )}
-                        <span className="text-content-tertiary" title="Sessions">{sessionCounts[pattern.id] || 0} sessions</span>
-                        <span className="text-content-tertiary" title="Practice time">{pattern.total_practice_minutes} minutes</span>
-                        <span className="text-content-tertiary" title="Total reps">{pattern.total_reps} reps</span>
+                        <span className="text-content-tertiary ml-1" title="Sessions">{sessionCounts[pattern.id] || 0}s</span>
+                        <span className="text-content-tertiary" title="Total practice time">{pattern.total_practice_minutes}m</span>
                       </div>
                       {pattern.comment && (
                         <div className="relative group/comment">
@@ -579,6 +703,21 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                     placeholder="e.g., Starting with 1"
                   />
                 </div>
+                <div>
+                  <label className="block text-content-secondary text-sm mb-2">Parent Folder</label>
+                  <select
+                    value={selectedFolderId}
+                    onChange={(e) => setSelectedFolderId(e.target.value)}
+                    className="w-full bg-theme-elevated text-content-primary px-4 py-2 rounded-lg"
+                  >
+                    <option value="root">Root</option>
+                    {getFolderHierarchy().map(({ folder, depth }) => (
+                      <option key={folder.id} value={folder.id}>
+                        {'—'.repeat(depth + 1)} {folder.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
@@ -589,9 +728,9 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
                     onChange={(e) => setSelectedFolderId(e.target.value)}
                     className="w-full bg-theme-elevated text-content-primary px-4 py-2 rounded-lg"
                   >
-                    {getFolders().map(folder => (
+                    {getFolderHierarchy().map(({ folder, depth }) => (
                       <option key={folder.id} value={folder.id}>
-                        📁 {folder.name}
+                        {'—'.repeat(depth)} 📁 {folder.name}
                       </option>
                     ))}
                   </select>
@@ -671,25 +810,31 @@ export function PatternDatabase({ onSelectPattern, selectedPatternId, onShowAnal
 
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {/* Root option */}
-              <button
-                onClick={() => handleMoveItem(contextMenuItem, 'root')}
-                className="w-full text-left px-4 py-3 bg-theme-elevated hover:bg-theme-hover rounded text-content-primary"
-              >
-                📁 Root
-              </button>
+              {contextMenuItem.isFolder && (
+                <button
+                  onClick={() => handleMoveItem(contextMenuItem, 'root')}
+                  className="w-full text-left px-4 py-3 bg-theme-elevated hover:bg-theme-hover rounded text-content-primary"
+                >
+                  📁 Root
+                </button>
+              )}
 
-              {/* Folder options */}
-              {getFolders().map(folder => {
-                // Don't allow moving to self if it's a folder
-                if (contextMenuItem.isFolder && contextMenuItem.id === folder.id) return null
+              {/* Folder options with hierarchy */}
+              {getFolderHierarchy().map(({ folder, depth }) => {
+                // Don't allow moving a folder to itself or its descendants
+                if (contextMenuItem.isFolder && (
+                  contextMenuItem.id === folder.id ||
+                  isDescendantOf(folder.id, contextMenuItem.id)
+                )) return null
 
                 return (
                   <button
                     key={folder.id}
                     onClick={() => handleMoveItem(contextMenuItem, folder.id)}
                     className="w-full text-left px-4 py-3 bg-theme-elevated hover:bg-theme-hover rounded text-content-primary"
+                    style={{ paddingLeft: `${16 + depth * 16}px` }}
                   >
-                    📁 {folder.name}
+                    {'—'.repeat(depth)} 📁 {folder.name}
                   </button>
                 )
               })}

@@ -11,7 +11,18 @@ import './index.css'
 
 function Root() {
   const { user, loading } = useAuth()
-  const [currentApp, setCurrentApp] = useState<'speedbuilder' | 'fretmaster'>('speedbuilder')
+  const getInitialApp = (): 'speedbuilder' | 'fretmaster' => {
+    const hash = window.location.hash.replace('#', '')
+    if (hash === 'fretmaster') return 'fretmaster'
+    if (hash === 'speedbuilder') return 'speedbuilder'
+    return 'speedbuilder'
+  }
+  const [currentApp, setCurrentApp] = useState<'speedbuilder' | 'fretmaster'>(getInitialApp)
+
+  const handleSwitchApp = (app: 'speedbuilder' | 'fretmaster') => {
+    setCurrentApp(app)
+    window.history.replaceState(null, '', `#${app}`)
+  }
 
   if (loading) {
     return (
@@ -27,8 +38,13 @@ function Root() {
 
   return (
     <div className="min-h-screen">
-      <TopNav currentApp={currentApp} onSwitchApp={setCurrentApp} />
-      {currentApp === 'speedbuilder' ? <App /> : <FretMaster />}
+      <TopNav currentApp={currentApp} onSwitchApp={handleSwitchApp} />
+      <div style={{ display: currentApp === 'speedbuilder' ? 'block' : 'none' }}>
+        <App />
+      </div>
+      <div style={{ display: currentApp === 'fretmaster' ? 'block' : 'none' }}>
+        <FretMaster />
+      </div>
     </div>
   )
 }

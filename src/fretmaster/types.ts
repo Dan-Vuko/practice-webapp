@@ -6,6 +6,7 @@ export interface Tuning {
 export interface Color {
   bgColor: string;
   textColor: string;
+  ringClassName?: string;
 }
 
 export interface RingColor {
@@ -19,6 +20,7 @@ export interface HighlightedNote {
   bgColor: string;
   textColor: string;
   ringClassName?: string;
+  dotSize?: 'small';
 }
 
 export type StructureLabelType = 'interval' | 'noteName' | 'sargam' | 'degree';
@@ -27,6 +29,9 @@ export interface Structure {
   name: string;
   intervals: { interval: number; name: string }[];
   colors: Color[];
+  dotSize?: 'small';
+  fixedRoot?: string;  // When set, symbol/color lookup uses interval from this root instead of selected root
+  fixedMap?: { name: string; color: Color }[];  // 12-entry chromatic lookup from fixedRoot
 }
 
 export type StructureKey = string;
