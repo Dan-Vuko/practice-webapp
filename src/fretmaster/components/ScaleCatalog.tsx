@@ -62,6 +62,10 @@ const COMMON_TETRADS: { id: string; name: string; pcs: number[] }[] = [
 
 const TETRAD_MAP = new Map(COMMON_TETRADS.map(t => [t.id, t]));
 
+// Lookup sets for identifying common chords by their pitch class fingerprint
+const COMMON_TRIAD_RINGS = new Set(COMMON_TRIADS.map(t => pcsToRing(t.pcs)));
+const COMMON_TETRAD_RINGS = new Set(COMMON_TETRADS.map(t => pcsToRing(t.pcs)));
+
 // The 4 core Barry Harris scales only
 const BARRY_HARRIS_SCALES = new Set([2997, 2989, 3509, 3445]);
 
@@ -118,6 +122,39 @@ function computeMiniNotes(pcs: number[]): Record<string, HighlightedNote> {
     }
   });
   return notes;
+}
+
+/** BFS to collect layers of related scales (subsets or supersets) */
+function collectLayers(
+  startN: number,
+  direction: 'children' | 'parents',
+  scaleMap: Map<number, CatalogScale>,
+  maxLayers: number = 4
+): number[][] {
+  const seen = new Set<number>([startN]);
+  const layers: number[][] = [];
+  let frontier = [startN];
+
+  for (let depth = 0; depth < maxLayers; depth++) {
+    const nextFrontier: number[] = [];
+    for (const n of frontier) {
+      const s = scaleMap.get(n);
+      if (!s) continue;
+      const neighbors = direction === 'children' ? s.directChildren : s.directParents;
+      for (const nb of neighbors) {
+        if (!seen.has(nb)) {
+          seen.add(nb);
+          nextFrontier.push(nb);
+        }
+      }
+    }
+    if (nextFrontier.length === 0) break;
+    nextFrontier.sort((a, b) => a - b);
+    layers.push(nextFrontier);
+    frontier = nextFrontier;
+  }
+
+  return layers;
 }
 
 /** Play a scale ascending from middle C, then the octave */
@@ -451,6 +488,28 @@ const GroupSection: React.FC<{
   </div>
 );
 
+const DetailSection: React.FC<{
+  id: string;
+  label: React.ReactNode;
+  collapsed: Set<string>;
+  onToggle: (id: string) => void;
+  children: React.ReactNode;
+}> = ({ id, label, collapsed, onToggle, children }) => {
+  const isOpen = !collapsed.has(id);
+  return (
+    <div>
+      <button
+        onClick={() => onToggle(id)}
+        className="flex items-center gap-1 text-xs text-gray-400 uppercase tracking-wider hover:text-gray-200 transition-colors"
+      >
+        <ChevronIcon className={`w-3 h-3 transition-transform duration-200 ${isOpen ? '' : '-rotate-90'}`} />
+        {label}
+      </button>
+      {isOpen && <div className="flex flex-wrap gap-1.5 mt-1">{children}</div>}
+    </div>
+  );
+};
+
 interface ScaleRowProps {
   scale: CatalogScale;
   isExpanded: boolean;
@@ -473,20 +532,37 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
   onVisualize,
   onNavigate,
   nameMap,
+  scaleMap,
   expandedRef,
 }) => {
-  // Compute triads and tetrads from root (only when expanded)
-  const chordsFromRoot = useMemo(() => {
-    if (!isExpanded || scale.card < 3) return { triads: [], tetrads: [] };
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => new Set(['otherTriads', 'otherTetrads']));
+  const toggleSection = useCallback((id: string) => {
+    setCollapsedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
-    const triads: { pcs: number[]; ring: number; name: string }[] = [];
-    const tetrads: { pcs: number[]; ring: number; name: string }[] = [];
+  // Compute triads and tetrads from root, split into common vs other (only when expanded)
+  const chordsFromRoot = useMemo(() => {
+    const empty = { commonTriads: [], otherTriads: [], commonTetrads: [], otherTetrads: [] };
+    if (!isExpanded || scale.card < 3) return empty;
+
+    type Chord = { pcs: number[]; ring: number; name: string };
+    const commonTriads: Chord[] = [];
+    const otherTriads: Chord[] = [];
+    const commonTetrads: Chord[] = [];
+    const otherTetrads: Chord[] = [];
 
     // Triads from root
     for (const subset of subsetsFromRoot(scale.pcs, 3)) {
       const ring = pcsToRing(subset);
       const name = nameMap[String(ring)] || '';
-      triads.push({ pcs: subset, ring, name });
+      const chord = { pcs: subset, ring, name };
+      if (COMMON_TRIAD_RINGS.has(ring)) commonTriads.push(chord);
+      else otherTriads.push(chord);
     }
 
     // Tetrads from root
@@ -494,17 +570,29 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
       for (const subset of subsetsFromRoot(scale.pcs, 4)) {
         const ring = pcsToRing(subset);
         const name = nameMap[String(ring)] || '';
-        tetrads.push({ pcs: subset, ring, name });
+        const chord = { pcs: subset, ring, name };
+        if (COMMON_TETRAD_RINGS.has(ring)) commonTetrads.push(chord);
+        else otherTetrads.push(chord);
       }
     }
 
-    return { triads, tetrads };
+    return { commonTriads, otherTriads, commonTetrads, otherTetrads };
   }, [isExpanded, scale.pcs, scale.card, nameMap]);
 
   const miniNotes = useMemo(() => {
     if (!isExpanded) return {};
     return computeMiniNotes(scale.pcs);
   }, [isExpanded, scale.pcs]);
+
+  const subsetLayers = useMemo(() => {
+    if (!isExpanded) return [];
+    return collectLayers(scale.n, 'children', scaleMap);
+  }, [isExpanded, scale.n, scaleMap]);
+
+  const supersetLayers = useMemo(() => {
+    if (!isExpanded) return [];
+    return collectLayers(scale.n, 'parents', scaleMap);
+  }, [isExpanded, scale.n, scaleMap]);
 
   return (
     <div ref={expandedRef} className="bg-gray-900/50 rounded-md">
@@ -556,100 +644,129 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
             {!scale.prime && <span className="text-xs text-gray-500">Prime form: {nameMap[String(scale.primeNum)] || `#${scale.primeNum}`} (#{scale.primeNum})</span>}
           </div>
 
-          {/* Triads from Root */}
-          {chordsFromRoot.triads.length > 0 && (
-            <div>
-              <span className="text-xs text-gray-400 uppercase tracking-wider">Triads from Root ({chordsFromRoot.triads.length})</span>
-              <div className="flex flex-wrap gap-1.5 mt-1">
-                {chordsFromRoot.triads.map(chord => (
-                  <button
-                    key={chord.ring}
-                    onClick={() => onNavigate(chord.ring)}
-                    className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
-                    title={`[${chord.pcs.map(pc => INTERVAL_NAMES[pc]).join(', ')}]`}
-                  >
-                    {chord.name || `#${chord.ring}`} <span className="text-gray-500">{chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+          {/* Common Triads */}
+          {chordsFromRoot.commonTriads.length > 0 && (
+            <DetailSection id="commonTriads" label={<>Common Triads ({chordsFromRoot.commonTriads.length})</>} collapsed={collapsedSections} onToggle={toggleSection}>
+              {chordsFromRoot.commonTriads.map(chord => (
+                <button
+                  key={chord.ring}
+                  onClick={() => onNavigate(chord.ring)}
+                  className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
+                  title={`[${chord.pcs.map(pc => INTERVAL_NAMES[pc]).join(', ')}]`}
+                >
+                  {chord.name || `#${chord.ring}`} <span className="text-gray-500">{chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}</span>
+                </button>
+              ))}
+            </DetailSection>
           )}
 
-          {/* Tetrads from Root */}
-          {chordsFromRoot.tetrads.length > 0 && (
-            <div>
-              <span className="text-xs text-gray-400 uppercase tracking-wider">Tetrads from Root ({chordsFromRoot.tetrads.length})</span>
-              <div className="flex flex-wrap gap-1.5 mt-1">
-                {chordsFromRoot.tetrads.map(chord => (
-                  <button
-                    key={chord.ring}
-                    onClick={() => onNavigate(chord.ring)}
-                    className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
-                    title={`[${chord.pcs.map(pc => INTERVAL_NAMES[pc]).join(', ')}]`}
-                  >
-                    {chord.name || `#${chord.ring}`} <span className="text-gray-500">{chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+          {/* Common Tetrads */}
+          {chordsFromRoot.commonTetrads.length > 0 && (
+            <DetailSection id="commonTetrads" label={<>Common Tetrads ({chordsFromRoot.commonTetrads.length})</>} collapsed={collapsedSections} onToggle={toggleSection}>
+              {chordsFromRoot.commonTetrads.map(chord => (
+                <button
+                  key={chord.ring}
+                  onClick={() => onNavigate(chord.ring)}
+                  className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
+                  title={`[${chord.pcs.map(pc => INTERVAL_NAMES[pc]).join(', ')}]`}
+                >
+                  {chord.name || `#${chord.ring}`} <span className="text-gray-500">{chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}</span>
+                </button>
+              ))}
+            </DetailSection>
+          )}
+
+          {/* Other 3-Note Structures */}
+          {chordsFromRoot.otherTriads.length > 0 && (
+            <DetailSection id="otherTriads" label={<>Other 3-Note Structures ({chordsFromRoot.otherTriads.length})</>} collapsed={collapsedSections} onToggle={toggleSection}>
+              {chordsFromRoot.otherTriads.map(chord => (
+                <button
+                  key={chord.ring}
+                  onClick={() => onNavigate(chord.ring)}
+                  className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
+                  title={`[${chord.pcs.map(pc => INTERVAL_NAMES[pc]).join(', ')}]`}
+                >
+                  {chord.name || `#${chord.ring}`} <span className="text-gray-500">{chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}</span>
+                </button>
+              ))}
+            </DetailSection>
+          )}
+
+          {/* Other 4-Note Structures */}
+          {chordsFromRoot.otherTetrads.length > 0 && (
+            <DetailSection id="otherTetrads" label={<>Other 4-Note Structures ({chordsFromRoot.otherTetrads.length})</>} collapsed={collapsedSections} onToggle={toggleSection}>
+              {chordsFromRoot.otherTetrads.map(chord => (
+                <button
+                  key={chord.ring}
+                  onClick={() => onNavigate(chord.ring)}
+                  className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
+                  title={`[${chord.pcs.map(pc => INTERVAL_NAMES[pc]).join(', ')}]`}
+                >
+                  {chord.name || `#${chord.ring}`} <span className="text-gray-500">{chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}</span>
+                </button>
+              ))}
+            </DetailSection>
           )}
 
           {/* Modes */}
           {scale.modeList.length > 0 && (
-            <div>
-              <span className="text-xs text-gray-400 uppercase tracking-wider">Modes ({scale.modeList.length + 1})</span>
-              <div className="flex flex-wrap gap-1.5 mt-1">
-                <span className="px-2 py-0.5 rounded text-xs bg-cyan-900/50 text-cyan-300 border border-cyan-800/50">
-                  Mode 1: {scale.name || `#${scale.n}`}
-                </span>
-                {scale.modeList.map(mode => (
-                  <button
-                    key={mode.n}
-                    onClick={() => onNavigate(mode.n)}
-                    className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
-                  >
-                    Mode {mode.m}: {mode.name || `#${mode.n}`}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <DetailSection id="modes" label={<>Modes ({scale.modeList.length + 1})</>} collapsed={collapsedSections} onToggle={toggleSection}>
+              <span className="px-2 py-0.5 rounded text-xs bg-cyan-900/50 text-cyan-300 border border-cyan-800/50">
+                Mode 1: {scale.name || `#${scale.n}`}
+              </span>
+              {scale.modeList.map(mode => (
+                <button
+                  key={mode.n}
+                  onClick={() => onNavigate(mode.n)}
+                  className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
+                >
+                  Mode {mode.m}: {mode.name || `#${mode.n}`}
+                </button>
+              ))}
+            </DetailSection>
           )}
 
-          {/* Direct subsets (children) */}
-          {scale.directChildren.length > 0 && (
-            <div>
-              <span className="text-xs text-gray-400 uppercase tracking-wider">Direct Subsets ({scale.directChildren.length}) <span className="normal-case">- remove 1 note</span></span>
-              <div className="flex flex-wrap gap-1.5 mt-1">
-                {scale.directChildren.map(childN => (
-                  <button
-                    key={childN}
-                    onClick={() => onNavigate(childN)}
-                    className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
-                  >
-                    {nameMap[String(childN)] || `#${childN}`}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Subsets (children) - multi-layer */}
+          {subsetLayers.map((layer, i) => (
+            <DetailSection
+              key={`sub-${i}`}
+              id={`sub-${i}`}
+              label={<>Subsets ({layer.length}) <span className="normal-case">— remove {i + 1} note{i + 1 > 1 ? 's' : ''}</span></>}
+              collapsed={collapsedSections}
+              onToggle={toggleSection}
+            >
+              {layer.map(childN => (
+                <button
+                  key={childN}
+                  onClick={() => onNavigate(childN)}
+                  className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
+                >
+                  {nameMap[String(childN)] || `#${childN}`}
+                </button>
+              ))}
+            </DetailSection>
+          ))}
 
-          {/* Direct supersets (parents) */}
-          {scale.directParents.length > 0 && (
-            <div>
-              <span className="text-xs text-gray-400 uppercase tracking-wider">Direct Supersets ({scale.directParents.length}) <span className="normal-case">- add 1 note</span></span>
-              <div className="flex flex-wrap gap-1.5 mt-1">
-                {scale.directParents.map(parentN => (
-                  <button
-                    key={parentN}
-                    onClick={() => onNavigate(parentN)}
-                    className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
-                  >
-                    {nameMap[String(parentN)] || `#${parentN}`}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Supersets (parents) - multi-layer */}
+          {supersetLayers.map((layer, i) => (
+            <DetailSection
+              key={`sup-${i}`}
+              id={`sup-${i}`}
+              label={<>Supersets ({layer.length}) <span className="normal-case">— add {i + 1} note{i + 1 > 1 ? 's' : ''}</span></>}
+              collapsed={collapsedSections}
+              onToggle={toggleSection}
+            >
+              {layer.map(parentN => (
+                <button
+                  key={parentN}
+                  onClick={() => onNavigate(parentN)}
+                  className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
+                >
+                  {nameMap[String(parentN)] || `#${parentN}`}
+                </button>
+              ))}
+            </DetailSection>
+          ))}
 
           {/* Complement & Inverse */}
           <div className="flex gap-4 flex-wrap">
