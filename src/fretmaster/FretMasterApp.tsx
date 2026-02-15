@@ -4,7 +4,7 @@ import Controls from './components/Controls';
 import ScaleCatalog from './components/ScaleCatalog';
 import { PlusIcon } from './components/icons/PlusIcon';
 import { TUNINGS, FRET_COUNT, STRUCTURES, RING_COLOR_PALETTE, SARGAM_NAMES, INTERVAL_NAMES, INTERVAL_COLORS, DEFAULT_THEME, ROMAN_DEGREES } from './constants';
-import type { Tuning, HighlightedNote, Color, RingColor, SavedPattern, Structure, StringGroup, Instrument, FretboardInstance, CatalogScale, CatalogData } from './types';
+import type { Tuning, HighlightedNote, Color, RingColor, SavedPattern, Structure, StringGroup, Instrument, FretboardInstance, CatalogScale, CatalogData, CustomPreset } from './types';
 import { getNoteOnFret, getIntervalFromRoot, midiToFrequency } from './utils/music';
 import { playNote } from './utils/audio';
 import { exportFretboardToPng } from './utils/export';
@@ -86,6 +86,7 @@ const App: React.FC = () => {
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
   const [catalogFavourites, setCatalogFavourites] = useState<number[]>([]);
   const [recentlyViewed, setRecentlyViewed] = useState<number[]>([]);
+  const [customPresets, setCustomPresets] = useState<CustomPreset[]>([]);
 
   // Load saved data on mount
   useEffect(() => {
@@ -109,6 +110,12 @@ const App: React.FC = () => {
           setCustomStructures(parsed);
         }
       }
+    } catch (e) { console.error(e); }
+
+    // Load custom presets
+    try {
+      const storedPresets = localStorage.getItem('fretmaster_custom_presets');
+      if (storedPresets) setCustomPresets(JSON.parse(storedPresets));
     } catch (e) { console.error(e); }
 
     // Load favorites from Supabase
@@ -189,6 +196,29 @@ const App: React.FC = () => {
       setActiveFretboardId(filtered[0].id);
     }
   }, [fretboards, activeFretboardId]);
+
+  const savePreset = useCallback((name: string) => {
+    const preset: CustomPreset = {
+      id: `preset_${Date.now()}`,
+      name,
+      description: fretboards.map(fb => fb.name).join(', '),
+      fretboards: fretboards.map(fb => ({
+        name: fb.name,
+        rootNote: fb.rootNote,
+        structureKey: fb.globalStructure,
+        pcs: [...fb.visibleIntervals].sort((a, b) => a - b),
+      })),
+    };
+    const updated = [...customPresets, preset];
+    setCustomPresets(updated);
+    localStorage.setItem('fretmaster_custom_presets', JSON.stringify(updated));
+  }, [fretboards, customPresets]);
+
+  const deletePreset = useCallback((id: string) => {
+    const updated = customPresets.filter(p => p.id !== id);
+    setCustomPresets(updated);
+    localStorage.setItem('fretmaster_custom_presets', JSON.stringify(updated));
+  }, [customPresets]);
 
   const applyPreset = useCallback((preset: { fretboards: { name: string; rootNote: string; structureKey: string; pcs: number[] }[] }) => {
     const newFbs = preset.fretboards.map((fb, i) => ({
@@ -502,6 +532,9 @@ const App: React.FC = () => {
           recentlyViewed={recentlyViewed}
           catalogStructures={catalogStructures}
           onApplyPreset={applyPreset}
+          customPresets={customPresets}
+          onSavePreset={savePreset}
+          onDeletePreset={deletePreset}
         />
 
         <div className="flex-1 flex flex-col gap-6 overflow-y-auto">

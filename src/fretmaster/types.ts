@@ -101,6 +101,13 @@ export interface CatalogData {
   scales: CatalogScale[];
 }
 
+export interface CustomPreset {
+  id: string;
+  name: string;
+  description: string;
+  fretboards: { name: string; rootNote: string; structureKey: string; pcs: number[] }[];
+}
+
 export interface ScaleFilters {
   search: string;
   showPrimeOnly: boolean;
