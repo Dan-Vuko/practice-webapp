@@ -85,6 +85,7 @@ const Controls: React.FC<ControlsProps> = (props) => {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [newPatternName, setNewPatternName] = useState('');
   const [presetName, setPresetName] = useState('');
+  const [selectedPresetId, setSelectedPresetId] = useState('');
 
   const allStructures = useMemo(() => ({
     ...STRUCTURES, ...props.customStructures, ...props.catalogStructures
@@ -354,51 +355,43 @@ const Controls: React.FC<ControlsProps> = (props) => {
 
       <CollapsibleSection title="Presets" isOpen={openSections.advanced} onToggle={() => toggleSection('advanced')}>
         <div className="space-y-2">
-          <select
-            defaultValue=""
-            onChange={(e) => {
-              const val = e.target.value;
-              if (!val) return;
-              const builtIn = FRETBOARD_PRESETS.find(p => p.id === val);
-              if (builtIn) { props.onApplyPreset(builtIn); }
-              else {
-                const custom = props.customPresets.find(p => p.id === val);
-                if (custom) props.onApplyPreset(custom);
-              }
-              e.target.value = '';
-            }}
-            className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white"
-          >
-            <option value="" disabled>Select a preset...</option>
-            <optgroup label="Built-in">
+          <div className="flex gap-1">
+            <select
+              value={selectedPresetId}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedPresetId(val);
+                if (!val) return;
+                const builtIn = FRETBOARD_PRESETS.find(p => p.id === val);
+                if (builtIn) { props.onApplyPreset(builtIn); }
+                else {
+                  const custom = props.customPresets.find(p => p.id === val);
+                  if (custom) props.onApplyPreset(custom);
+                }
+              }}
+              className="flex-1 bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white"
+            >
+              <option value="">Select a preset...</option>
               {FRETBOARD_PRESETS.map(preset => (
                 <option key={preset.id} value={preset.id}>{preset.name}</option>
               ))}
-            </optgroup>
-            {props.customPresets.length > 0 && (
-              <optgroup label="Custom">
-                {props.customPresets.map(preset => (
-                  <option key={preset.id} value={preset.id}>{preset.name}</option>
-                ))}
-              </optgroup>
-            )}
-          </select>
-          {props.customPresets.length > 0 && (
-            <div className="space-y-1">
               {props.customPresets.map(preset => (
-                <div key={preset.id} className="flex items-center justify-between px-2 py-1 bg-gray-900/50 rounded text-[10px]">
-                  <span className="text-gray-400 truncate">{preset.name}</span>
-                  <button
-                    onClick={() => props.onDeletePreset(preset.id)}
-                    className="ml-2 text-red-400 hover:text-red-300 font-bold flex-shrink-0"
-                    title="Delete preset"
-                  >
-                    x
-                  </button>
-                </div>
+                <option key={preset.id} value={preset.id}>{preset.name}</option>
               ))}
-            </div>
-          )}
+            </select>
+            {selectedPresetId && !FRETBOARD_PRESETS.some(p => p.id === selectedPresetId) && (
+              <button
+                onClick={() => {
+                  props.onDeletePreset(selectedPresetId);
+                  setSelectedPresetId('');
+                }}
+                className="px-2 py-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 font-bold rounded-lg text-[10px] uppercase transition-all border border-red-500/20"
+                title="Delete preset"
+              >
+                Del
+              </button>
+            )}
+          </div>
           <div className="flex gap-1">
             <input
               type="text"
