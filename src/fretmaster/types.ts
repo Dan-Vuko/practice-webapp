@@ -117,4 +117,6 @@ export interface ScaleFilters {
   showBarryHarris: boolean;
   showFavourites: boolean;
   noteCount: number | null;
+  containsTriad: string | null;
+  containsTetrad: string | null;
 }

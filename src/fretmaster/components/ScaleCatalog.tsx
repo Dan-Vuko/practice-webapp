@@ -27,7 +27,37 @@ const DEFAULT_FILTERS: ScaleFilters = {
   showBarryHarris: false,
   showFavourites: false,
   noteCount: null,
+  containsTriad: null,
+  containsTetrad: null,
 };
+
+const COMMON_TRIADS: { id: string; name: string; pcs: number[] }[] = [
+  { id: 'maj',   name: 'Major',   pcs: [0, 4, 7] },
+  { id: 'min',   name: 'Minor',   pcs: [0, 3, 7] },
+  { id: 'dim',   name: 'Dim',     pcs: [0, 3, 6] },
+  { id: 'aug',   name: 'Aug',     pcs: [0, 4, 8] },
+  { id: 'sus4',  name: 'Sus4',    pcs: [0, 5, 7] },
+  { id: 'sus2',  name: 'Sus2',    pcs: [0, 2, 7] },
+];
+
+const TRIAD_MAP = new Map(COMMON_TRIADS.map(t => [t.id, t]));
+
+const COMMON_TETRADS: { id: string; name: string; pcs: number[] }[] = [
+  { id: 'maj7',    name: 'Maj7',     pcs: [0, 4, 7, 11] },
+  { id: 'dom7',    name: 'Dom7',     pcs: [0, 4, 7, 10] },
+  { id: 'min7',    name: 'Min7',     pcs: [0, 3, 7, 10] },
+  { id: 'minmaj7', name: 'MinMaj7',  pcs: [0, 3, 7, 11] },
+  { id: 'maj6',    name: 'Maj6',     pcs: [0, 4, 7, 9] },
+  { id: 'min6',    name: 'Min6',     pcs: [0, 3, 7, 9] },
+  { id: 'm7b5',    name: 'm7b5',     pcs: [0, 3, 6, 10] },
+  { id: 'dim7',    name: 'Dim7',     pcs: [0, 3, 6, 9] },
+  { id: '7b5',     name: '7b5',      pcs: [0, 4, 6, 10] },
+  { id: 'aug7',    name: '7#5',      pcs: [0, 4, 8, 10] },
+  { id: 'augmaj7', name: 'AugMaj7',  pcs: [0, 4, 8, 11] },
+  { id: '7sus4',   name: '7sus4',    pcs: [0, 5, 7, 10] },
+];
+
+const TETRAD_MAP = new Map(COMMON_TETRADS.map(t => [t.id, t]));
 
 // The 4 core Barry Harris scales only
 const BARRY_HARRIS_SCALES = new Set([2997, 2989, 3509, 3445]);
@@ -97,6 +127,20 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
       if (filters.showBarryHarris && !isBarryHarrisScale(scale)) return false;
       if (filters.showFavourites && !favouriteSet.has(scale.n)) return false;
       if (filters.noteCount !== null && scale.card !== filters.noteCount) return false;
+      if (filters.containsTriad) {
+        const triad = TRIAD_MAP.get(filters.containsTriad);
+        if (triad) {
+          const pcsSet = new Set(scale.pcs);
+          if (!triad.pcs.every(pc => pcsSet.has(pc))) return false;
+        }
+      }
+      if (filters.containsTetrad) {
+        const tetrad = TETRAD_MAP.get(filters.containsTetrad);
+        if (tetrad) {
+          const pcsSet = new Set(scale.pcs);
+          if (!tetrad.pcs.every(pc => pcsSet.has(pc))) return false;
+        }
+      }
       return true;
     });
   }, [scales, filters, favouriteSet]);
@@ -251,6 +295,26 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
             <option value="">Any notes</option>
             {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
               <option key={n} value={n}>{n} notes</option>
+            ))}
+          </select>
+          <select
+            value={filters.containsTriad ?? ''}
+            onChange={e => updateFilter('containsTriad', e.target.value || null)}
+            className="bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm text-white"
+          >
+            <option value="">Any triad</option>
+            {COMMON_TRIADS.map(t => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+          <select
+            value={filters.containsTetrad ?? ''}
+            onChange={e => updateFilter('containsTetrad', e.target.value || null)}
+            className="bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm text-white"
+          >
+            <option value="">Any tetrad</option>
+            {COMMON_TETRADS.map(t => (
+              <option key={t.id} value={t.id}>{t.name}</option>
             ))}
           </select>
           <button
