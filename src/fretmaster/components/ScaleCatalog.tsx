@@ -7,6 +7,8 @@ import { StarIcon } from './icons/StarIcon';
 import { SearchIcon } from './icons/SearchIcon';
 import { ChevronIcon } from './icons/ChevronIcon';
 import ScaleLookup from './ScaleLookup';
+import { midiToFrequency } from '../utils/music';
+import { playNote } from '../utils/audio';
 
 interface ScaleCatalogProps {
   scales: CatalogScale[];
@@ -92,6 +94,15 @@ function subsetsFromRoot(pcs: number[], k: number): number[][] {
 /** Compute Ian Ring number from pitch class set */
 function pcsToRing(pcs: number[]): number {
   return pcs.reduce((sum, pc) => sum + (1 << pc), 0);
+}
+
+/** Play a scale ascending from middle C, then the octave */
+function playScalePreview(pcs: number[]) {
+  const baseMidi = 60; // C4
+  const notes = [...pcs, 12]; // include octave
+  notes.forEach((pc, i) => {
+    setTimeout(() => playNote(midiToFrequency(baseMidi + pc), 'pluck', 0.6), i * 180);
+  });
 }
 
 const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
@@ -479,6 +490,13 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
           title={isFavourite ? 'Remove from favourites' : 'Add to favourites'}
         >
           <StarIcon className="w-5 h-5" filled={isFavourite} />
+        </button>
+        <button
+          onClick={e => { e.stopPropagation(); playScalePreview(scale.pcs); }}
+          className="flex-shrink-0 p-0.5 text-gray-500 hover:text-cyan-400 transition-colors"
+          title="Preview scale"
+        >
+          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         </button>
         <div className="flex-1 min-w-0">
           <span className="font-medium text-white">{scale.name || `Scale #${scale.n}`}</span>
