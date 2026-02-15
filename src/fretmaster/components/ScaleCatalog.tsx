@@ -898,7 +898,7 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
                   key={chord.ring}
                   onClick={() => onNavigate(chord.ring)}
                   className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
-                  title={`[${chord.pcs.map(pc => INTERVAL_NAMES[pc]).join(', ')}]`}
+                  title={chord.name || `#${chord.ring}`}
                 >
                   {COMMON_CHORD_NAMES.get(chord.ring) || chord.name || `#${chord.ring}`} <span className="text-gray-500">{chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}</span>
                 </button>
@@ -914,7 +914,7 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
                   key={chord.ring}
                   onClick={() => onNavigate(chord.ring)}
                   className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
-                  title={`[${chord.pcs.map(pc => INTERVAL_NAMES[pc]).join(', ')}]`}
+                  title={chord.name || `#${chord.ring}`}
                 >
                   {COMMON_CHORD_NAMES.get(chord.ring) || chord.name || `#${chord.ring}`} <span className="text-gray-500">{chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}</span>
                 </button>
@@ -930,9 +930,9 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
                   key={chord.ring}
                   onClick={() => onNavigate(chord.ring)}
                   className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
-                  title={`[${chord.pcs.map(pc => INTERVAL_NAMES[pc]).join(', ')}]`}
+                  title={chord.name || `#${chord.ring}`}
                 >
-                  {chord.name || `#${chord.ring}`} <span className="text-gray-500">{chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}</span>
+                  {chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}
                 </button>
               ))}
             </DetailSection>
@@ -946,9 +946,9 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
                   key={chord.ring}
                   onClick={() => onNavigate(chord.ring)}
                   className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
-                  title={`[${chord.pcs.map(pc => INTERVAL_NAMES[pc]).join(', ')}]`}
+                  title={chord.name || `#${chord.ring}`}
                 >
-                  {chord.name || `#${chord.ring}`} <span className="text-gray-500">{chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}</span>
+                  {chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}
                 </button>
               ))}
             </DetailSection>
