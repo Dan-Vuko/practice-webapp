@@ -65,14 +65,30 @@ const COMMON_TETRADS: { id: string; name: string; pcs: number[] }[] = [
 
 const TETRAD_MAP = new Map(COMMON_TETRADS.map(t => [t.id, t]));
 
-// Lookup sets for identifying common chords by their pitch class fingerprint
-const COMMON_TRIAD_RINGS = new Set(COMMON_TRIADS.map(t => pcsToRing(t.pcs)));
-const COMMON_TETRAD_RINGS = new Set(COMMON_TETRADS.map(t => pcsToRing(t.pcs)));
-
-// Reverse lookup: ring number -> familiar chord name (e.g. 1161 -> "Min7")
+// Lookup sets for identifying common chords at ALL transpositions
+const COMMON_TRIAD_RINGS = new Set<number>();
+const COMMON_TETRAD_RINGS = new Set<number>();
+// Reverse lookup: ring number -> familiar chord name with root (e.g. "Min7(A)")
 const COMMON_CHORD_NAMES = new Map<number, string>();
-for (const t of COMMON_TRIADS) COMMON_CHORD_NAMES.set(pcsToRing(t.pcs), t.name);
-for (const t of COMMON_TETRADS) COMMON_CHORD_NAMES.set(pcsToRing(t.pcs), t.name);
+
+for (const t of COMMON_TRIADS) {
+  for (let r = 0; r < 12; r++) {
+    const ring = pcsToRing(t.pcs.map(pc => (pc + r) % 12));
+    COMMON_TRIAD_RINGS.add(ring);
+    if (!COMMON_CHORD_NAMES.has(ring)) {
+      COMMON_CHORD_NAMES.set(ring, r === 0 ? t.name : `${t.name}(${ALL_NOTES[r]})`);
+    }
+  }
+}
+for (const t of COMMON_TETRADS) {
+  for (let r = 0; r < 12; r++) {
+    const ring = pcsToRing(t.pcs.map(pc => (pc + r) % 12));
+    COMMON_TETRAD_RINGS.add(ring);
+    if (!COMMON_CHORD_NAMES.has(ring)) {
+      COMMON_CHORD_NAMES.set(ring, r === 0 ? t.name : `${t.name}(${ALL_NOTES[r]})`);
+    }
+  }
+}
 
 // All 10 Barry Harris chord scales
 const BARRY_HARRIS_SCALES = new Set([
