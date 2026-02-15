@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import type { Tuning, Color, RingColor, SavedPattern, Structure, StringGroup, Instrument, FretboardInstance } from '../types';
+import type { Tuning, Color, RingColor, SavedPattern, Structure, StringGroup, Instrument, FretboardInstance} from '../types';
 import { TUNINGS, KEYS, COLOR_PALETTE, STRUCTURES, INTERVAL_NAMES, CATEGORIZED_STRUCTURES, FRET_COUNT } from '../constants';
 import { ChevronIcon } from './icons/ChevronIcon';
 import { TrashIcon } from './icons/TrashIcon';
@@ -34,6 +34,9 @@ interface ControlsProps {
   favorites: string[];
   onToggleFavorite: (structureKey: string) => void;
   onOpenCatalog: () => void;
+  catalogFavourites: number[];
+  recentlyViewed: number[];
+  catalogStructures: Record<string, Structure>;
 }
 
 const CollapsibleSection: React.FC<{ title: string; isOpen: boolean; onToggle: () => void; children: React.ReactNode }> = ({ title, isOpen, onToggle, children }) => (
@@ -66,7 +69,12 @@ const Controls: React.FC<ControlsProps> = (props) => {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [newPatternName, setNewPatternName] = useState('');
 
-  const allStructures = useMemo(() => ({ ...STRUCTURES, ...props.customStructures }), [props.customStructures]);
+  const allStructures = useMemo(() => ({
+    ...STRUCTURES, ...props.customStructures, ...props.catalogStructures
+  }), [props.customStructures, props.catalogStructures]);
+
+  const catalogFavSet = useMemo(() => new Set(props.catalogFavourites), [props.catalogFavourites]);
+  const recentNotInFavs = useMemo(() => props.recentlyViewed.filter(n => !catalogFavSet.has(n)), [props.recentlyViewed, catalogFavSet]);
   const currentStructure = allStructures[props.activeFretboard.globalStructure];
   const structureIntervals = useMemo(() => {
     if (!currentStructure) return new Set<number>();
@@ -260,6 +268,26 @@ const Controls: React.FC<ControlsProps> = (props) => {
               {Object.keys(props.customStructures).length > 0 && (
                 <optgroup label="Custom">
                   {Object.entries(props.customStructures).map(([key, structure]) => <option key={key} value={key}>{structure.name}</option>)}
+                </optgroup>
+              )}
+              {props.catalogFavourites.length > 0 && (
+                <optgroup label="Catalog Favourites">
+                  {props.catalogFavourites.map(n => {
+                    const key = `catalog_${n}`;
+                    const structure = allStructures[key];
+                    if (!structure) return null;
+                    return <option key={`catfav-${n}`} value={key}>★ {structure.name}</option>;
+                  })}
+                </optgroup>
+              )}
+              {recentNotInFavs.length > 0 && (
+                <optgroup label="Recently Viewed">
+                  {recentNotInFavs.map(n => {
+                    const key = `catalog_${n}`;
+                    const structure = allStructures[key];
+                    if (!structure) return null;
+                    return <option key={`recent-${n}`} value={key}>{structure.name}</option>;
+                  })}
                 </optgroup>
               )}
             </select>

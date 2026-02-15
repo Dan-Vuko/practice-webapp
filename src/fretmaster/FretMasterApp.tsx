@@ -10,6 +10,41 @@ import { playNote } from './utils/audio';
 import { exportFretboardToPng } from './utils/export';
 import { db } from '../database';
 
+// BH coloring helper: detect dim7 chord in 8-note scales and apply blue/red
+const DIM7_CHORDS_BH = [[0,3,6,9], [1,4,7,10], [2,5,8,11]];
+const BH_BLUE: Color = { bgColor: 'bg-blue-500', textColor: 'text-white' };
+const BH_RED: Color = { bgColor: 'bg-red-500', textColor: 'text-white' };
+const BH_ROOT_BLUE: Color = { bgColor: 'bg-blue-500', textColor: 'text-white', ringClassName: 'ring-yellow-400' };
+const BH_ROOT_RED: Color = { bgColor: 'bg-red-500', textColor: 'text-white', ringClassName: 'ring-yellow-400' };
+
+function buildCatalogStructure(scale: CatalogScale): Structure {
+  let isBH = false;
+  let dim7Set: Set<number> | null = null;
+  if (scale.card === 8) {
+    const pcsSet = new Set(scale.pcs);
+    for (const dim7 of DIM7_CHORDS_BH) {
+      if (dim7.every(pc => pcsSet.has(pc))) {
+        isBH = true;
+        dim7Set = new Set(dim7);
+        break;
+      }
+    }
+  }
+
+  return {
+    name: scale.name || `Scale #${scale.n}`,
+    intervals: scale.pcs.map(pc => ({ interval: pc, name: INTERVAL_NAMES[pc % 12] })),
+    colors: scale.pcs.map((pc, i) => {
+      if (isBH && dim7Set) {
+        const isDim = dim7Set.has(pc);
+        if (i === 0) return isDim ? BH_ROOT_RED : BH_ROOT_BLUE;
+        return isDim ? BH_RED : BH_BLUE;
+      }
+      return INTERVAL_COLORS[pc % 12];
+    }),
+  };
+}
+
 const structureIntervalsMap = new Map<string, string>();
 for (const key in STRUCTURES) {
     const structure = STRUCTURES[key];
@@ -50,14 +85,30 @@ const App: React.FC = () => {
   const [catalogData, setCatalogData] = useState<CatalogData | null>(null);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
   const [catalogFavourites, setCatalogFavourites] = useState<number[]>([]);
+  const [recentlyViewed, setRecentlyViewed] = useState<number[]>([]);
 
   // Load saved data on mount
   useEffect(() => {
     try {
       const storedPatterns = localStorage.getItem('fretmaster_patterns');
       if (storedPatterns) setSavedPatterns(JSON.parse(storedPatterns));
+      // Load custom structures, cleaning up old catalog_* entries
       const storedStructures = localStorage.getItem('fretmaster_structures');
-      if (storedStructures) setCustomStructures(JSON.parse(storedStructures));
+      if (storedStructures) {
+        const parsed = JSON.parse(storedStructures);
+        const cleaned: Record<string, Structure> = {};
+        let needsClean = false;
+        for (const [key, val] of Object.entries(parsed)) {
+          if (key.startsWith('catalog_')) { needsClean = true; }
+          else { cleaned[key] = val as Structure; }
+        }
+        if (needsClean) {
+          setCustomStructures(cleaned);
+          localStorage.setItem('fretmaster_structures', JSON.stringify(cleaned));
+        } else {
+          setCustomStructures(parsed);
+        }
+      }
     } catch (e) { console.error(e); }
 
     // Load favorites from Supabase
@@ -70,8 +121,7 @@ const App: React.FC = () => {
       .catch(e => console.error('Failed to load catalog:', e));
 
     // Load catalog favourites from localStorage
-    // Auto-favourite the 4 core Barry Harris scales on first load
-    const BH_DEFAULTS = [2997, 2989, 3509, 3445, 3507]; // Maj6Dim, Min6Dim, Dom7Dim, Dom7b5Dim, PhrygDomBebop
+    const BH_DEFAULTS = [2997, 2989, 3509, 3445]; // Maj6Dim, Min6Dim, Dom7Dim, Dom7b5Dim
     try {
       const stored = localStorage.getItem('fretmaster_catalog_favourites');
       if (stored) {
@@ -80,6 +130,12 @@ const App: React.FC = () => {
         setCatalogFavourites(BH_DEFAULTS);
         localStorage.setItem('fretmaster_catalog_favourites', JSON.stringify(BH_DEFAULTS));
       }
+    } catch (e) { console.error(e); }
+
+    // Load recently viewed
+    try {
+      const storedRecent = localStorage.getItem('fretmaster_recently_viewed');
+      if (storedRecent) setRecentlyViewed(JSON.parse(storedRecent));
     } catch (e) { console.error(e); }
   }, []);
 
@@ -97,7 +153,20 @@ const App: React.FC = () => {
     }
   }, [favorites]);
 
-  const allStructures = useMemo((): Record<string, Structure> => ({ ...STRUCTURES, ...customStructures }), [customStructures]);
+  // Build structures for catalog scales (favourites + recently viewed)
+  const catalogStructures = useMemo((): Record<string, Structure> => {
+    if (!catalogData) return {};
+    const result: Record<string, Structure> = {};
+    const scaleMap = new Map(catalogData.scales.map(s => [s.n, s]));
+    const allNums = new Set([...catalogFavourites, ...recentlyViewed]);
+    for (const n of allNums) {
+      const scale = scaleMap.get(n);
+      if (scale) result[`catalog_${n}`] = buildCatalogStructure(scale);
+    }
+    return result;
+  }, [catalogData, catalogFavourites, recentlyViewed]);
+
+  const allStructures = useMemo((): Record<string, Structure> => ({ ...STRUCTURES, ...customStructures, ...catalogStructures }), [customStructures, catalogStructures]);
 
   const activeFretboard = useMemo(() => {
     return fretboards.find(fb => fb.id === activeFretboardId) || fretboards[0];
@@ -355,17 +424,15 @@ const App: React.FC = () => {
 
   const visualizeCatalogScale = useCallback((scale: CatalogScale) => {
     const newId = `catalog_${scale.n}`;
-    const newStructure: Structure = {
-      name: scale.name || `Scale #${scale.n}`,
-      intervals: scale.pcs.map(pc => ({ interval: pc, name: INTERVAL_NAMES[pc % 12] })),
-      colors: scale.pcs.map(pc => INTERVAL_COLORS[pc % 12]),
-    };
-    const updated = { ...customStructures, [newId]: newStructure };
-    setCustomStructures(updated);
-    localStorage.setItem('fretmaster_structures', JSON.stringify(updated));
+    // Add to recently viewed (cap at 10, most recent first)
+    setRecentlyViewed(prev => {
+      const next = [scale.n, ...prev.filter(n => n !== scale.n)].slice(0, 10);
+      localStorage.setItem('fretmaster_recently_viewed', JSON.stringify(next));
+      return next;
+    });
     updateActiveFretboard({ globalStructure: newId, visibleIntervals: new Set(scale.pcs) });
     setIsCatalogOpen(false);
-  }, [customStructures, updateActiveFretboard]);
+  }, [updateActiveFretboard]);
 
   const handleExport = useCallback(() => {
     const intervalsToExport = activeFretboard.isAdvancedMode ? activeGroup?.visibleIntervals : activeFretboard.visibleIntervals;
@@ -420,6 +487,9 @@ const App: React.FC = () => {
           favorites={favorites}
           onToggleFavorite={toggleFavorite}
           onOpenCatalog={() => setIsCatalogOpen(true)}
+          catalogFavourites={catalogFavourites}
+          recentlyViewed={recentlyViewed}
+          catalogStructures={catalogStructures}
         />
 
         <div className="flex-1 flex flex-col gap-6 overflow-y-auto">
