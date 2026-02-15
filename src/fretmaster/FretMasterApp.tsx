@@ -505,6 +505,7 @@ const App: React.FC = () => {
               theme={DEFAULT_THEME}
               highlightedNotes={calculateHighlightedNotes(fb)}
               customStructures={customStructures}
+              catalogStructures={catalogStructures}
               onNoteClick={(sIdx, fret) => {
                 const noteInfo = getNoteOnFret(tuning.strings[sIdx], fret);
                 if (isSoundEnabled && noteInfo.midi) playNote(midiToFrequency(noteInfo.midi), instrument);

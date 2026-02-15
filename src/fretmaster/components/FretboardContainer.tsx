@@ -15,6 +15,7 @@ interface FretboardContainerProps {
   highlightedNotes: Record<string, HighlightedNote>;
   onNoteClick: (stringIndex: number, fret: number) => void;
   customStructures: Record<string, Structure>;
+  catalogStructures: Record<string, Structure>;
 }
 
 const FretboardContainer: React.FC<FretboardContainerProps> = ({
@@ -28,9 +29,10 @@ const FretboardContainer: React.FC<FretboardContainerProps> = ({
   highlightedNotes,
   onNoteClick,
   customStructures,
+  catalogStructures,
 }) => {
   // Get the structure name
-  const allStructures = { ...STRUCTURES, ...customStructures };
+  const allStructures = { ...STRUCTURES, ...customStructures, ...catalogStructures };
   const structure = allStructures[fretboard.globalStructure];
   const structureName = structure?.name || 'Unknown';
   const displayTitle = `${fretboard.rootNote} ${structureName}`;
