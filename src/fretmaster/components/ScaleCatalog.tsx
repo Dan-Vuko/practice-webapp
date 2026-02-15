@@ -185,87 +185,56 @@ function parseIntervalPattern(input: string): number[] | null {
 
 function ivContainsPattern(iv: number[], pattern: number[]): boolean {
   if (pattern.length > iv.length) return false;
-  const doubled = [...iv, ...iv];
-  for (let start = 0; start < iv.length; start++) {
-    let match = true;
-    for (let j = 0; j < pattern.length; j++) {
-      if (doubled[start + j] !== pattern[j]) { match = false; break; }
-    }
-    if (match) return true;
+  for (let j = 0; j < pattern.length; j++) {
+    if (iv[j] !== pattern[j]) return false;
   }
-  return false;
+  return true;
 }
 
-// --- Feature 5: Bi-triadic hexatonic pre-computation ---
+// --- Feature 5 & 6: Bi-triadic / Bi-tetradic detection ---
+// Rule: split scale into odd-position degrees (1,3,5,...) and even-position degrees (2,4,6,...).
+// Check if each half forms a recognized triad (for 6-note) or tetrad (for 8-note).
 
-type TriadDecomposition = { t1: string; r1: number; t2: string; r2: number };
-type TetradDecomposition = { t1: string; r1: number; t2: string; r2: number };
+type ChordDecomposition = { t1: string; r1: number; pcs1: number[]; t2: string; r2: number; pcs2: number[] };
+type TriadDecomposition = ChordDecomposition;
+type TetradDecomposition = ChordDecomposition;
 
-const TRANSPOSED_TRIADS: { id: string; root: number; pcs: number[] }[] = [];
+// Build lookup: sorted pcs key -> { id, root }
+const TRIAD_LOOKUP = new Map<string, { id: string; root: number }>();
 for (const triad of COMMON_TRIADS) {
   for (let r = 0; r < 12; r++) {
-    TRANSPOSED_TRIADS.push({
-      id: triad.id,
-      root: r,
-      pcs: triad.pcs.map(pc => (pc + r) % 12),
-    });
+    const transposed = triad.pcs.map(pc => (pc + r) % 12).sort((a, b) => a - b);
+    const key = transposed.join(',');
+    if (!TRIAD_LOOKUP.has(key)) TRIAD_LOOKUP.set(key, { id: triad.id, root: r });
   }
 }
 
-const TRIAD_HASH_INDEX = new Map<string, { id: string; root: number }[]>();
-for (const t of TRANSPOSED_TRIADS) {
-  const key = [...t.pcs].sort((a, b) => a - b).join(',');
-  if (!TRIAD_HASH_INDEX.has(key)) TRIAD_HASH_INDEX.set(key, []);
-  TRIAD_HASH_INDEX.get(key)!.push({ id: t.id, root: t.root });
+const TETRAD_LOOKUP = new Map<string, { id: string; root: number }>();
+for (const tetrad of COMMON_TETRADS) {
+  for (let r = 0; r < 12; r++) {
+    const transposed = tetrad.pcs.map(pc => (pc + r) % 12).sort((a, b) => a - b);
+    const key = transposed.join(',');
+    if (!TETRAD_LOOKUP.has(key)) TETRAD_LOOKUP.set(key, { id: tetrad.id, root: r });
+  }
 }
 
 function findBiTriadicDecomposition(pcs: number[]): TriadDecomposition | null {
   if (pcs.length !== 6) return null;
-  const pcsSet = new Set(pcs);
-  for (const t of TRANSPOSED_TRIADS) {
-    if (!t.pcs.every(pc => pcsSet.has(pc))) continue;
-    const remainder = pcs.filter(pc => !new Set(t.pcs).has(pc)).sort((a, b) => a - b);
-    const remKey = remainder.join(',');
-    const matches = TRIAD_HASH_INDEX.get(remKey);
-    if (matches && matches.length > 0) {
-      return { t1: t.id, r1: t.root, t2: matches[0].id, r2: matches[0].root };
-    }
-  }
+  const odd = [pcs[0], pcs[2], pcs[4]].sort((a, b) => a - b);
+  const even = [pcs[1], pcs[3], pcs[5]].sort((a, b) => a - b);
+  const m1 = TRIAD_LOOKUP.get(odd.join(','));
+  const m2 = TRIAD_LOOKUP.get(even.join(','));
+  if (m1 && m2) return { t1: m1.id, r1: m1.root, pcs1: odd, t2: m2.id, r2: m2.root, pcs2: even };
   return null;
-}
-
-// --- Feature 6: Bi-tetradic octotonic pre-computation ---
-
-const TRANSPOSED_TETRADS: { id: string; root: number; pcs: number[] }[] = [];
-for (const tetrad of COMMON_TETRADS) {
-  for (let r = 0; r < 12; r++) {
-    TRANSPOSED_TETRADS.push({
-      id: tetrad.id,
-      root: r,
-      pcs: tetrad.pcs.map(pc => (pc + r) % 12),
-    });
-  }
-}
-
-const TETRAD_HASH_INDEX = new Map<string, { id: string; root: number }[]>();
-for (const t of TRANSPOSED_TETRADS) {
-  const key = [...t.pcs].sort((a, b) => a - b).join(',');
-  if (!TETRAD_HASH_INDEX.has(key)) TETRAD_HASH_INDEX.set(key, []);
-  TETRAD_HASH_INDEX.get(key)!.push({ id: t.id, root: t.root });
 }
 
 function findBiTetradicDecomposition(pcs: number[]): TetradDecomposition | null {
   if (pcs.length !== 8) return null;
-  const pcsSet = new Set(pcs);
-  for (const t of TRANSPOSED_TETRADS) {
-    if (!t.pcs.every(pc => pcsSet.has(pc))) continue;
-    const remainder = pcs.filter(pc => !new Set(t.pcs).has(pc)).sort((a, b) => a - b);
-    const remKey = remainder.join(',');
-    const matches = TETRAD_HASH_INDEX.get(remKey);
-    if (matches && matches.length > 0) {
-      return { t1: t.id, r1: t.root, t2: matches[0].id, r2: matches[0].root };
-    }
-  }
+  const odd = [pcs[0], pcs[2], pcs[4], pcs[6]].sort((a, b) => a - b);
+  const even = [pcs[1], pcs[3], pcs[5], pcs[7]].sort((a, b) => a - b);
+  const m1 = TETRAD_LOOKUP.get(odd.join(','));
+  const m2 = TETRAD_LOOKUP.get(even.join(','));
+  if (m1 && m2) return { t1: m1.id, r1: m1.root, pcs1: odd, t2: m2.id, r2: m2.root, pcs2: even };
   return null;
 }
 
@@ -275,6 +244,17 @@ function triadName(id: string): string {
 
 function tetradName(id: string): string {
   return TETRAD_MAP.get(id)?.name || id;
+}
+
+/** Play a bi-chord decomposition: first arpeggio ascending, then second */
+function playDecomposition(d: ChordDecomposition) {
+  const baseMidi = 60;
+  const sorted1 = [...d.pcs1].sort((a, b) => a - b);
+  const sorted2 = [...d.pcs2].sort((a, b) => a - b);
+  const all = [...sorted1, ...sorted2];
+  all.forEach((pc, i) => {
+    setTimeout(() => playNote(midiToFrequency(baseMidi + pc), 'pluck', 0.6), i * 200);
+  });
 }
 
 /** Play a scale ascending from middle C, then the octave */
@@ -838,7 +818,19 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
           {/* Intervals */}
           <div>
             <span className="text-xs text-gray-400 uppercase tracking-wider">Intervals</span>
-            <div className="text-sm text-cyan-300 mt-0.5">{formatIntervals(scale.pcs)}</div>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-sm text-cyan-300">{formatIntervals(scale.pcs)}</span>
+              <button
+                onClick={() => {
+                  const text = `${formatIntervals(scale.pcs)} [${scale.iv.join(',')}] (${scale.name || `Scale #${scale.n}`})`;
+                  navigator.clipboard.writeText(text);
+                }}
+                className="p-0.5 text-gray-500 hover:text-cyan-400 transition-colors"
+                title="Copy scale info to clipboard"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" strokeWidth="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" strokeWidth="2"/></svg>
+              </button>
+            </div>
             <div className="text-xs text-gray-500 mt-0.5">Structure: [{scale.iv.join(', ')}]</div>
           </div>
 
@@ -847,8 +839,22 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
             {scale.prime && <span className="px-2 py-0.5 rounded text-xs bg-green-900/50 text-green-400">Prime</span>}
             {scale.sym && <span className="px-2 py-0.5 rounded text-xs bg-purple-900/50 text-purple-400">Symmetric</span>}
             {isBarryHarrisScale(scale) && <span className="px-2 py-0.5 rounded text-xs bg-blue-900/50 text-blue-400">Barry Harris</span>}
-            {biTriadic && <span className="px-2 py-0.5 rounded text-xs bg-amber-900/50 text-amber-400">Bi-Triadic: {triadName(biTriadic.t1)}({ALL_NOTES[biTriadic.r1]}) + {triadName(biTriadic.t2)}({ALL_NOTES[biTriadic.r2]})</span>}
-            {biTetradic && <span className="px-2 py-0.5 rounded text-xs bg-teal-900/50 text-teal-400">Bi-Tetradic: {tetradName(biTetradic.t1)}({ALL_NOTES[biTetradic.r1]}) + {tetradName(biTetradic.t2)}({ALL_NOTES[biTetradic.r2]})</span>}
+            {biTriadic && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-amber-900/50 text-amber-400">
+                Bi-Triadic: {triadName(biTriadic.t1)}({ALL_NOTES[biTriadic.r1]}) + {triadName(biTriadic.t2)}({ALL_NOTES[biTriadic.r2]})
+                <button onClick={(e) => { e.stopPropagation(); playDecomposition(biTriadic); }} className="hover:text-amber-200 transition-colors" title="Play arpeggios">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+              </span>
+            )}
+            {biTetradic && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-teal-900/50 text-teal-400">
+                Bi-Tetradic: {tetradName(biTetradic.t1)}({ALL_NOTES[biTetradic.r1]}) + {tetradName(biTetradic.t2)}({ALL_NOTES[biTetradic.r2]})
+                <button onClick={(e) => { e.stopPropagation(); playDecomposition(biTetradic); }} className="hover:text-teal-200 transition-colors" title="Play arpeggios">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+              </span>
+            )}
             {!scale.prime && <span className="text-xs text-gray-500">Prime form: {nameMap[String(scale.primeNum)] || `#${scale.primeNum}`} (#{scale.primeNum})</span>}
           </div>
 
@@ -1014,25 +1020,13 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
             </div>
           </div>
 
-          {/* Action buttons */}
-          <div className="flex gap-2">
-            <button
-              onClick={onVisualize}
-              className="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-1.5 px-4 rounded-md transition-colors text-sm"
-            >
-              Visualize on Fretboard
-            </button>
-            <button
-              onClick={() => {
-                const text = `${formatIntervals(scale.pcs)} [${scale.iv.join(',')}] (${scale.name || `Scale #${scale.n}`})`;
-                navigator.clipboard.writeText(text);
-              }}
-              className="bg-gray-700 hover:bg-gray-600 text-gray-300 font-semibold py-1.5 px-4 rounded-md transition-colors text-sm"
-              title="Copy scale info to clipboard"
-            >
-              Copy
-            </button>
-          </div>
+          {/* Visualize button */}
+          <button
+            onClick={onVisualize}
+            className="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-1.5 px-4 rounded-md transition-colors text-sm"
+          >
+            Visualize on Fretboard
+          </button>
         </div>
       )}
     </div>

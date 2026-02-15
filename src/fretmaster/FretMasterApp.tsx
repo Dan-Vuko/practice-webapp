@@ -69,11 +69,7 @@ const createDefaultFretboard = (id: string): FretboardInstance => ({
   showDiff: false,
 });
 
-interface AppProps {
-  initialCatalogScale?: number | null;
-}
-
-const App: React.FC<AppProps> = ({ initialCatalogScale: initialCatalogScaleProp }) => {
+const App: React.FC = () => {
   // Multi-fretboard state
   const [fretboards, setFretboards] = useState<FretboardInstance[]>([createDefaultFretboard('1')]);
   const [activeFretboardId, setActiveFretboardId] = useState<string>('1');
@@ -89,7 +85,7 @@ const App: React.FC<AppProps> = ({ initialCatalogScale: initialCatalogScaleProp 
   const [favorites, setFavorites] = useState<string[]>([]);
   const [catalogData, setCatalogData] = useState<CatalogData | null>(null);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
-  const [initialCatalogScale, setInitialCatalogScale] = useState<number | null>(initialCatalogScaleProp ?? null);
+  const [initialCatalogScale, setInitialCatalogScale] = useState<number | null>(null);
   const [catalogFavourites, setCatalogFavourites] = useState<number[]>([]);
   const [recentlyViewed, setRecentlyViewed] = useState<number[]>([]);
   const [customPresets, setCustomPresets] = useState<CustomPreset[]>([]);
@@ -159,15 +155,6 @@ const App: React.FC<AppProps> = ({ initialCatalogScale: initialCatalogScaleProp 
       if (storedRecent) setRecentlyViewed(JSON.parse(storedRecent));
     } catch (e) { console.error(e); }
   }, []);
-
-  // Feature 7: Auto-open catalog when URL deep link is present
-  useEffect(() => {
-    if (initialCatalogScaleProp && catalogData) {
-      setInitialCatalogScale(initialCatalogScaleProp);
-      setIsCatalogOpen(true);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [catalogData]);
 
   const toggleFavorite = useCallback(async (structureKey: string) => {
     try {
@@ -523,7 +510,6 @@ const App: React.FC<AppProps> = ({ initialCatalogScale: initialCatalogScaleProp 
     });
     updateActiveFretboard({ globalStructure: newId, visibleIntervals: new Set(scale.pcs) });
     setIsCatalogOpen(false);
-    window.history.replaceState(null, '', `#fretmaster/scale/${scale.n}`);
   }, [updateActiveFretboard]);
 
   const openCatalogForFretboard = useCallback((fb: FretboardInstance) => {
@@ -658,7 +644,7 @@ const App: React.FC<AppProps> = ({ initialCatalogScale: initialCatalogScaleProp 
           favourites={catalogFavourites}
           onToggleFavourite={toggleCatalogFavourite}
           onVisualize={visualizeCatalogScale}
-          onClose={() => { setIsCatalogOpen(false); setInitialCatalogScale(null); window.history.replaceState(null, '', '#fretmaster'); }}
+          onClose={() => { setIsCatalogOpen(false); setInitialCatalogScale(null); }}
           initialScaleNumber={initialCatalogScale}
         />
       )}
