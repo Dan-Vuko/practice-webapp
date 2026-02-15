@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import type { CatalogScale, ScaleFilters, HighlightedNote } from '../types';
-import { INTERVAL_NAMES, INTERVAL_COLORS, TUNINGS, DEFAULT_THEME, FRET_COUNT, ALL_NOTES } from '../constants';
+import { INTERVAL_NAMES, INTERVAL_COLORS, TUNINGS, DEFAULT_THEME, FRET_COUNT } from '../constants';
 import { XIcon } from './icons/XIcon';
 import { StarIcon } from './icons/StarIcon';
 import { SearchIcon } from './icons/SearchIcon';
@@ -842,7 +842,7 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
             {isBarryHarrisScale(scale) && <span className="px-2 py-0.5 rounded text-xs bg-blue-900/50 text-blue-400">Barry Harris</span>}
             {biTriadic && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-amber-900/50 text-amber-400">
-                Bi-Triadic: {triadName(biTriadic.t1)}({ALL_NOTES[biTriadic.r1]}) + {triadName(biTriadic.t2)}({ALL_NOTES[biTriadic.r2]})
+                Bi-Triadic: {triadName(biTriadic.t1)}({INTERVAL_NAMES[(biTriadic.r1 - scale.pcs[0] + 12) % 12]}) + {triadName(biTriadic.t2)}({INTERVAL_NAMES[(biTriadic.r2 - scale.pcs[0] + 12) % 12]})
                 <button onClick={(e) => { e.stopPropagation(); playDecomposition(biTriadic); }} className="hover:text-amber-200 transition-colors" title="Play arpeggios">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                 </button>
@@ -850,7 +850,7 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
             )}
             {biTetradic && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-teal-900/50 text-teal-400">
-                Bi-Tetradic: {tetradName(biTetradic.t1)}({ALL_NOTES[biTetradic.r1]}) + {tetradName(biTetradic.t2)}({ALL_NOTES[biTetradic.r2]})
+                Bi-Tetradic: {tetradName(biTetradic.t1)}({INTERVAL_NAMES[(biTetradic.r1 - scale.pcs[0] + 12) % 12]}) + {tetradName(biTetradic.t2)}({INTERVAL_NAMES[(biTetradic.r2 - scale.pcs[0] + 12) % 12]})
                 <button onClick={(e) => { e.stopPropagation(); playDecomposition(biTetradic); }} className="hover:text-teal-200 transition-colors" title="Play arpeggios">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                 </button>
