@@ -16,6 +16,7 @@ interface FretboardContainerProps {
   onNoteClick: (stringIndex: number, fret: number) => void;
   customStructures: Record<string, Structure>;
   catalogStructures: Record<string, Structure>;
+  onTitleClick?: () => void;
 }
 
 const FretboardContainer: React.FC<FretboardContainerProps> = ({
@@ -30,6 +31,7 @@ const FretboardContainer: React.FC<FretboardContainerProps> = ({
   onNoteClick,
   customStructures,
   catalogStructures,
+  onTitleClick,
 }) => {
   // Get the structure name
   const allStructures = { ...STRUCTURES, ...customStructures, ...catalogStructures };
@@ -48,8 +50,18 @@ const FretboardContainer: React.FC<FretboardContainerProps> = ({
     >
       {/* Header with name and remove button */}
       <div className="flex items-center justify-between mb-3">
-        <h3 className={`text-sm font-bold uppercase tracking-wide
-          ${isActive ? 'text-cyan-400' : 'text-gray-500'}`}>
+        <h3
+          onClick={(e) => {
+            if (onTitleClick) {
+              e.stopPropagation();
+              onTitleClick();
+            }
+          }}
+          className={`text-sm font-bold uppercase tracking-wide
+          ${isActive ? 'text-cyan-400' : 'text-gray-500'}
+          ${onTitleClick ? 'cursor-pointer hover:underline' : ''}`}
+          title={onTitleClick ? 'View in Scale Catalog' : undefined}
+        >
           {displayTitle}
         </h3>
 

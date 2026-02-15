@@ -15,6 +15,7 @@ interface ScaleCatalogProps {
   onToggleFavourite: (scaleNumber: number) => void;
   onVisualize: (scale: CatalogScale) => void;
   onClose: () => void;
+  initialScaleNumber?: number | null;
 }
 
 const DEFAULT_FILTERS: ScaleFilters = {
@@ -70,9 +71,10 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
   onToggleFavourite,
   onVisualize,
   onClose,
+  initialScaleNumber,
 }) => {
   const [filters, setFilters] = useState<ScaleFilters>(DEFAULT_FILTERS);
-  const [expandedScale, setExpandedScale] = useState<number | null>(null);
+  const [expandedScale, setExpandedScale] = useState<number | null>(initialScaleNumber ?? null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<number>>(new Set());
   const [isLookupOpen, setIsLookupOpen] = useState(false);
   const expandedRef = useRef<HTMLDivElement | null>(null);
@@ -151,6 +153,24 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
     setIsLookupOpen(false);
     navigateToScale(scaleNumber);
   }, [navigateToScale]);
+
+  // Scroll to initial scale on mount
+  useEffect(() => {
+    if (initialScaleNumber) {
+      const scale = scaleMap.get(initialScaleNumber);
+      if (scale) {
+        setCollapsedGroups(prev => {
+          const next = new Set(prev);
+          next.delete(scale.modes);
+          return next;
+        });
+        setTimeout(() => {
+          expandedRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

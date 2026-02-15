@@ -84,6 +84,7 @@ const App: React.FC = () => {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [catalogData, setCatalogData] = useState<CatalogData | null>(null);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+  const [initialCatalogScale, setInitialCatalogScale] = useState<number | null>(null);
   const [catalogFavourites, setCatalogFavourites] = useState<number[]>([]);
   const [recentlyViewed, setRecentlyViewed] = useState<number[]>([]);
   const [customPresets, setCustomPresets] = useState<CustomPreset[]>([]);
@@ -476,6 +477,13 @@ const App: React.FC = () => {
     setIsCatalogOpen(false);
   }, [updateActiveFretboard]);
 
+  const openCatalogForFretboard = useCallback((fb: FretboardInstance) => {
+    // Compute Ian Ring number from visible intervals
+    const ringNumber = [...fb.visibleIntervals].reduce((sum, pc) => sum + (1 << pc), 0);
+    setInitialCatalogScale(ringNumber);
+    setIsCatalogOpen(true);
+  }, []);
+
   const handleExport = useCallback(() => {
     const intervalsToExport = activeFretboard.isAdvancedMode ? activeGroup?.visibleIntervals : activeFretboard.visibleIntervals;
     const rootToExport = activeFretboard.isAdvancedMode && activeGroup ? activeGroup.rootNote : activeFretboard.rootNote;
@@ -527,7 +535,7 @@ const App: React.FC = () => {
           onStrum={strumAll}
           favorites={favorites}
           onToggleFavorite={toggleFavorite}
-          onOpenCatalog={() => setIsCatalogOpen(true)}
+          onOpenCatalog={() => { setInitialCatalogScale(null); setIsCatalogOpen(true); }}
           catalogFavourites={catalogFavourites}
           recentlyViewed={recentlyViewed}
           catalogStructures={catalogStructures}
@@ -551,6 +559,7 @@ const App: React.FC = () => {
               highlightedNotes={calculateHighlightedNotes(fb)}
               customStructures={customStructures}
               catalogStructures={catalogStructures}
+              onTitleClick={() => openCatalogForFretboard(fb)}
               onNoteClick={(sIdx, fret) => {
                 const noteInfo = getNoteOnFret(tuning.strings[sIdx], fret);
                 if (isSoundEnabled && noteInfo.midi) playNote(midiToFrequency(noteInfo.midi), instrument);
@@ -595,7 +604,8 @@ const App: React.FC = () => {
           favourites={catalogFavourites}
           onToggleFavourite={toggleCatalogFavourite}
           onVisualize={visualizeCatalogScale}
-          onClose={() => setIsCatalogOpen(false)}
+          onClose={() => { setIsCatalogOpen(false); setInitialCatalogScale(null); }}
+          initialScaleNumber={initialCatalogScale}
         />
       )}
     </div>
