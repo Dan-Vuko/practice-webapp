@@ -174,7 +174,7 @@ const App: React.FC = () => {
 
   // Fretboard management functions
   const addFretboard = useCallback(() => {
-    if (fretboards.length >= 3) return;
+    if (fretboards.length >= 4) return;
     const newId = (fretboards.length + 1).toString();
     const newFretboard = createDefaultFretboard(newId);
     setFretboards(prev => [...prev, newFretboard]);
@@ -189,6 +189,18 @@ const App: React.FC = () => {
       setActiveFretboardId(filtered[0].id);
     }
   }, [fretboards, activeFretboardId]);
+
+  const applyPreset = useCallback((preset: { fretboards: { name: string; rootNote: string; structureKey: string; pcs: number[] }[] }) => {
+    const newFbs = preset.fretboards.map((fb, i) => ({
+      ...createDefaultFretboard(String(i + 1)),
+      name: fb.name,
+      rootNote: fb.rootNote,
+      globalStructure: fb.structureKey,
+      visibleIntervals: new Set(fb.pcs),
+    }));
+    setFretboards(newFbs);
+    setActiveFretboardId('1');
+  }, []);
 
   const updateActiveFretboard = useCallback((updates: Partial<FretboardInstance>) => {
     setFretboards(prev => prev.map(fb =>
@@ -477,7 +489,6 @@ const App: React.FC = () => {
           onSaveCustomStructure={saveCustomStructure}
           onDeleteCustomStructure={deleteCustomStructure}
           detectedStructureName={detectedStructureName}
-          updateGroup={updateGroup}
           isSoundEnabled={isSoundEnabled}
           setIsSoundEnabled={setIsSoundEnabled}
           instrument={instrument}
@@ -490,6 +501,7 @@ const App: React.FC = () => {
           catalogFavourites={catalogFavourites}
           recentlyViewed={recentlyViewed}
           catalogStructures={catalogStructures}
+          onApplyPreset={applyPreset}
         />
 
         <div className="flex-1 flex flex-col gap-6 overflow-y-auto">
@@ -525,7 +537,7 @@ const App: React.FC = () => {
             />
           ))}
 
-          {fretboards.length < 3 && (
+          {fretboards.length < 4 && (
             <button
               onClick={addFretboard}
               className="p-6 border-2 border-dashed border-cyan-500/50 rounded-3xl

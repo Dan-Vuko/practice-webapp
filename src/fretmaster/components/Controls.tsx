@@ -1,11 +1,24 @@
 
 import React, { useState, useMemo } from 'react';
-import type { Tuning, Color, RingColor, SavedPattern, Structure, StringGroup, Instrument, FretboardInstance} from '../types';
-import { TUNINGS, KEYS, COLOR_PALETTE, STRUCTURES, INTERVAL_NAMES, CATEGORIZED_STRUCTURES, FRET_COUNT } from '../constants';
+import type { Tuning, Color, RingColor, SavedPattern, Structure, Instrument, FretboardInstance} from '../types';
+import { TUNINGS, KEYS, COLOR_PALETTE, STRUCTURES, INTERVAL_NAMES, CATEGORIZED_STRUCTURES } from '../constants';
 import { ChevronIcon } from './icons/ChevronIcon';
-import { TrashIcon } from './icons/TrashIcon';
 import { SpeakerIcon } from './icons/SpeakerIcon';
 import { BookIcon } from './icons/BookIcon';
+
+const FRETBOARD_PRESETS = [
+  {
+    id: 'bh_all_4',
+    name: 'Barry Harris (All 4)',
+    description: 'Maj6, Min6, Dom7, Dom7\u266D5 Dim \u2014 Root D',
+    fretboards: [
+      { name: 'Maj6 Dim', rootNote: 'D', structureKey: 'catalog_2997', pcs: [0,2,4,5,7,8,9,11] },
+      { name: 'Min6 Dim', rootNote: 'D', structureKey: 'catalog_2989', pcs: [0,2,3,5,7,8,9,11] },
+      { name: 'Dom7 Dim', rootNote: 'D', structureKey: 'catalog_3509', pcs: [0,2,4,5,7,8,10,11] },
+      { name: 'Dom7\u266D5 Dim', rootNote: 'D', structureKey: 'catalog_3445', pcs: [0,2,4,5,6,8,10,11] },
+    ],
+  },
+];
 
 interface ControlsProps {
   activeFretboard: FretboardInstance;
@@ -24,7 +37,6 @@ interface ControlsProps {
   onSaveCustomStructure: (name: string) => void;
   onDeleteCustomStructure: (id: string) => void;
   detectedStructureName: string | null;
-  updateGroup: (id: string, newProps: Partial<StringGroup>) => void;
   isSoundEnabled: boolean;
   setIsSoundEnabled: (value: boolean) => void;
   instrument: Instrument;
@@ -37,6 +49,7 @@ interface ControlsProps {
   catalogFavourites: number[];
   recentlyViewed: number[];
   catalogStructures: Record<string, Structure>;
+  onApplyPreset: (preset: typeof FRETBOARD_PRESETS[0]) => void;
 }
 
 const CollapsibleSection: React.FC<{ title: string; isOpen: boolean; onToggle: () => void; children: React.ReactNode }> = ({ title, isOpen, onToggle, children }) => (
@@ -335,53 +348,18 @@ const Controls: React.FC<ControlsProps> = (props) => {
         </div>
       </CollapsibleSection>
 
-      <CollapsibleSection title="Advanced: Groups" isOpen={openSections.advanced} onToggle={() => toggleSection('advanced')}>
+      <CollapsibleSection title="Presets" isOpen={openSections.advanced} onToggle={() => toggleSection('advanced')}>
         <div className="space-y-2">
-           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Group Mode</span>
+          {FRETBOARD_PRESETS.map(preset => (
             <button
-              onClick={() => props.updateActiveFretboard({ isAdvancedMode: !props.activeFretboard.isAdvancedMode })}
-              className={`relative inline-flex items-center h-4 rounded-full w-8 transition-all ${props.activeFretboard.isAdvancedMode ? 'bg-cyan-600' : 'bg-gray-700'}`}
+              key={preset.id}
+              onClick={() => props.onApplyPreset(preset)}
+              className="w-full text-left p-2 rounded-lg bg-gray-900 border border-gray-700 hover:border-cyan-500/50 hover:bg-gray-800 transition-all"
             >
-              <span className={`inline-block w-2.5 h-2.5 transform bg-white rounded-full transition-transform ${props.activeFretboard.isAdvancedMode ? 'translate-x-4.5' : 'translate-x-1'}`} />
+              <div className="text-xs font-bold text-white">{preset.name}</div>
+              <div className="text-[10px] text-gray-400">{preset.description}</div>
             </button>
-          </div>
-          {props.activeFretboard.isAdvancedMode && (
-            <div className="space-y-2">
-              <button onClick={() => {
-                const newGroup: StringGroup = {
-                  id: `g_${Date.now()}`,
-                  name: `Group ${props.activeFretboard.stringGroups.length + 1}`,
-                  strings: [],
-                  rootNote: props.activeFretboard.rootNote,
-                  structureKey: props.activeFretboard.globalStructure,
-                  visibleIntervals: new Set([0, 4, 7]),
-                  fretRange: { start: 0, end: FRET_COUNT }
-                };
-                props.updateActiveFretboard({
-                  stringGroups: [...props.activeFretboard.stringGroups, newGroup],
-                  activeGroupId: newGroup.id
-                });
-              }} className="w-full py-1.5 bg-gray-700 text-white text-[10px] rounded-lg border border-gray-600 font-bold uppercase hover:bg-gray-600">+ New Group</button>
-              <div className="max-h-32 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
-                {props.activeFretboard.stringGroups.map((g: StringGroup) => (
-                  <button
-                    key={g.id}
-                    onClick={() => props.updateActiveFretboard({ activeGroupId: g.id })}
-                    className={`w-full flex items-center justify-between p-2 rounded-lg text-[10px] border transition-all ${props.activeFretboard.activeGroupId === g.id ? 'bg-cyan-900/30 border-cyan-500 text-white' : 'bg-gray-900 border-gray-700 text-gray-500'}`}
-                  >
-                    <span className="truncate">{g.name}</span>
-                    <div onClick={(e) => {
-                      e.stopPropagation();
-                      props.updateActiveFretboard({
-                        stringGroups: props.activeFretboard.stringGroups.filter(sg => sg.id !== g.id)
-                      });
-                    }} className="hover:text-red-400"><TrashIcon className="w-3 h-3" /></div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          ))}
         </div>
       </CollapsibleSection>
 
