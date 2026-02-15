@@ -323,7 +323,6 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
   onVisualize,
   onNavigate,
   nameMap,
-  scaleMap,
   expandedRef,
 }) => {
   return (

@@ -2,16 +2,33 @@
 
 /**
  * Build a compact scale catalog from the full Ian Ring scales.json + relationships.json.
- * Output: public/data/catalog.json (~500KB-1MB with relationships)
+ *
+ * Source data: Place scales.json and relationships.json from the Ian Ring webscrap
+ * in the same directory as this script (or pass paths as arguments).
+ *
+ * Output: public/data/catalog.json (~1MB with relationships)
+ *
+ * Usage: node scripts/build-catalog.cjs [scales.json path] [relationships.json path]
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const SCALES_PATH = path.join(__dirname, '..', 'ianring', 'webscrap', 'output', 'scales.json');
-const RELATIONSHIPS_PATH = path.join(__dirname, '..', 'ianring', 'webscrap', 'output', 'relationships.json');
+const SCALES_PATH = process.argv[2] || path.join(__dirname, 'scales.json');
+const RELATIONSHIPS_PATH = process.argv[3] || path.join(__dirname, 'relationships.json');
 const OUTPUT_DIR = path.join(__dirname, '..', 'public', 'data');
 const OUTPUT_PATH = path.join(OUTPUT_DIR, 'catalog.json');
+
+if (!fs.existsSync(SCALES_PATH)) {
+  console.error(`scales.json not found at: ${SCALES_PATH}`);
+  console.error('Usage: node scripts/build-catalog.cjs [scales.json path] [relationships.json path]');
+  process.exit(1);
+}
+
+if (!fs.existsSync(RELATIONSHIPS_PATH)) {
+  console.error(`relationships.json not found at: ${RELATIONSHIPS_PATH}`);
+  process.exit(1);
+}
 
 console.log('Loading scales.json...');
 const scalesRaw = JSON.parse(fs.readFileSync(SCALES_PATH, 'utf8'));
@@ -22,7 +39,6 @@ const relationshipsRaw = JSON.parse(fs.readFileSync(RELATIONSHIPS_PATH, 'utf8'))
 console.log(`Processing ${scalesRaw.length} scales...`);
 
 function parsePitchClassSet(pcsStr) {
-  // "{0,2,4,5,7,9,11}" -> [0,2,4,5,7,9,11]
   if (!pcsStr) return [];
   const match = pcsStr.match(/\{([^}]*)\}/);
   if (!match) return [];
@@ -30,7 +46,6 @@ function parsePitchClassSet(pcsStr) {
 }
 
 function parseIntervalStructure(ivStr) {
-  // "[2, 2, 1, 2, 2, 2, 1]" -> [2,2,1,2,2,2,1]
   if (!ivStr) return [];
   const match = ivStr.match(/\[([^\]]*)\]/);
   if (!match) return [];
@@ -58,19 +73,12 @@ function isSymmetric(analysis) {
   return val && val !== 'none';
 }
 
-// Build a quick lookup: scaleNumber -> scale entry
-const scaleByNumber = new Map();
-for (const scale of scalesRaw) {
-  scaleByNumber.set(scale.number, scale);
-}
-
-// Build nameMap and catalog entries
 const nameMap = {};
 const catalogScales = [];
 
 for (const scale of scalesRaw) {
   const n = scale.number;
-  if (n === 0) continue; // Skip empty scale
+  if (n === 0) continue;
 
   const name = scale.name || '';
   nameMap[String(n)] = name;
@@ -83,56 +91,32 @@ for (const scale of scalesRaw) {
   const prime = isPrime(analysis);
   const sym = isSymmetric(analysis);
 
-  // Find prime number for this scale
   let primeNum = n;
   if (!prime && scale.modes && scale.modes.length > 0) {
-    // The prime form is the smallest scale number among all modes (including self)
     const allModes = [n, ...scale.modes.map(m => m.scaleNumber)];
     primeNum = Math.min(...allModes);
   }
 
-  // Mode list
   const modeList = (scale.modes || []).map(m => ({
     m: m.mode,
     n: m.scaleNumber,
     name: m.name || ''
   }));
 
-  // Relationships
   const rel = relationshipsRaw[String(n)] || {};
   const directChildren = rel.directChildren || [];
   const directParents = rel.directParents || [];
-
-  // Complement
   const complement = scale.complement?.complementFamily?.[0] || 0;
-
-  // Inverse
   const inverse = scale.inverse?.scaleNumber || 0;
 
   catalogScales.push({
-    n,
-    name,
-    pcs,
-    iv,
-    card,
-    modes,
-    prime,
-    primeNum,
-    sym,
-    modeList,
-    directChildren,
-    directParents,
-    complement,
-    inverse
+    n, name, pcs, iv, card, modes, prime, primeNum, sym,
+    modeList, directChildren, directParents, complement, inverse
   });
 }
 
-const catalog = {
-  nameMap,
-  scales: catalogScales
-};
+const catalog = { nameMap, scales: catalogScales };
 
-// Ensure output directory exists
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
 const json = JSON.stringify(catalog);

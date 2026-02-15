@@ -12,7 +12,7 @@ interface ScaleLookupProps {
 
 const INTERVAL_LABELS = ['R', 'b2', '2', 'b3', '3', '4', 'b5', '5', 'b6', '6', 'b7', '7'];
 
-const ScaleLookup: React.FC<ScaleLookupProps> = ({ scales, nameMap, onSelect, onClose }) => {
+const ScaleLookup: React.FC<ScaleLookupProps> = ({ scales, onSelect, onClose }) => {
   const [activePcs, setActivePcs] = useState<Set<number>>(new Set([0]));
 
   const togglePc = (pc: number) => {
@@ -43,7 +43,6 @@ const ScaleLookup: React.FC<ScaleLookupProps> = ({ scales, nameMap, onSelect, on
     const results: CatalogScale[] = [];
     for (const s of scales) {
       if (s.n === ringNumber) continue;
-      // Check if this scale contains all selected pitch classes
       const scaleBits = s.n;
       let isSuperset = true;
       for (const pc of activePcs) {

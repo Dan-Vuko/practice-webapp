@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import FretboardContainer from './components/FretboardContainer';
 import Controls from './components/Controls';
+import ScaleCatalog from './components/ScaleCatalog';
 import { PlusIcon } from './components/icons/PlusIcon';
 import { TUNINGS, FRET_COUNT, STRUCTURES, RING_COLOR_PALETTE, SARGAM_NAMES, INTERVAL_NAMES, INTERVAL_COLORS, DEFAULT_THEME, ROMAN_DEGREES } from './constants';
-import type { Tuning, HighlightedNote, Color, RingColor, SavedPattern, Structure, StringGroup, Instrument, FretboardInstance } from './types';
+import type { Tuning, HighlightedNote, Color, RingColor, SavedPattern, Structure, StringGroup, Instrument, FretboardInstance, CatalogScale, CatalogData } from './types';
 import { getNoteOnFret, getIntervalFromRoot, midiToFrequency } from './utils/music';
 import { playNote } from './utils/audio';
 import { exportFretboardToPng } from './utils/export';
@@ -46,6 +47,9 @@ const App: React.FC = () => {
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [instrument, setInstrument] = useState<Instrument>('pluck');
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [catalogData, setCatalogData] = useState<CatalogData | null>(null);
+  const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+  const [catalogFavourites, setCatalogFavourites] = useState<number[]>([]);
 
   // Load saved data on mount
   useEffect(() => {
@@ -58,6 +62,18 @@ const App: React.FC = () => {
 
     // Load favorites from Supabase
     db.getFavorites().then(setFavorites).catch(console.error);
+
+    // Load catalog data
+    fetch('/data/catalog.json')
+      .then(r => r.json())
+      .then((data: CatalogData) => setCatalogData(data))
+      .catch(e => console.error('Failed to load catalog:', e));
+
+    // Load catalog favourites from localStorage
+    try {
+      const stored = localStorage.getItem('fretmaster_catalog_favourites');
+      if (stored) setCatalogFavourites(JSON.parse(stored));
+    } catch (e) { console.error(e); }
   }, []);
 
   const toggleFavorite = useCallback(async (structureKey: string) => {
@@ -320,6 +336,30 @@ const App: React.FC = () => {
     return notes;
   }, [tuning, allStructures]);
 
+  const toggleCatalogFavourite = useCallback((scaleNumber: number) => {
+    setCatalogFavourites(prev => {
+      const next = prev.includes(scaleNumber)
+        ? prev.filter(n => n !== scaleNumber)
+        : [...prev, scaleNumber];
+      localStorage.setItem('fretmaster_catalog_favourites', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const visualizeCatalogScale = useCallback((scale: CatalogScale) => {
+    const newId = `catalog_${scale.n}`;
+    const newStructure: Structure = {
+      name: scale.name || `Scale #${scale.n}`,
+      intervals: scale.pcs.map(pc => ({ interval: pc, name: INTERVAL_NAMES[pc % 12] })),
+      colors: scale.pcs.map(pc => INTERVAL_COLORS[pc % 12]),
+    };
+    const updated = { ...customStructures, [newId]: newStructure };
+    setCustomStructures(updated);
+    localStorage.setItem('fretmaster_structures', JSON.stringify(updated));
+    updateActiveFretboard({ globalStructure: newId, visibleIntervals: new Set(scale.pcs) });
+    setIsCatalogOpen(false);
+  }, [customStructures, updateActiveFretboard]);
+
   const handleExport = useCallback(() => {
     const intervalsToExport = activeFretboard.isAdvancedMode ? activeGroup?.visibleIntervals : activeFretboard.visibleIntervals;
     const rootToExport = activeFretboard.isAdvancedMode && activeGroup ? activeGroup.rootNote : activeFretboard.rootNote;
@@ -372,6 +412,7 @@ const App: React.FC = () => {
           onStrum={strumAll}
           favorites={favorites}
           onToggleFavorite={toggleFavorite}
+          onOpenCatalog={() => setIsCatalogOpen(true)}
         />
 
         <div className="flex-1 flex flex-col gap-6 overflow-y-auto">
@@ -423,6 +464,17 @@ const App: React.FC = () => {
        <footer className="text-center mt-6 text-gray-600 text-[10px] font-bold uppercase tracking-widest">
         Pro Visualization Suite &bull; V2.5 &bull; Developed by Senior Engineering
        </footer>
+
+      {isCatalogOpen && catalogData && (
+        <ScaleCatalog
+          scales={catalogData.scales}
+          nameMap={catalogData.nameMap}
+          favourites={catalogFavourites}
+          onToggleFavourite={toggleCatalogFavourite}
+          onVisualize={visualizeCatalogScale}
+          onClose={() => setIsCatalogOpen(false)}
+        />
+      )}
     </div>
   );
 };

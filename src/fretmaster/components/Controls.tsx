@@ -5,6 +5,7 @@ import { TUNINGS, KEYS, COLOR_PALETTE, STRUCTURES, INTERVAL_NAMES, CATEGORIZED_S
 import { ChevronIcon } from './icons/ChevronIcon';
 import { TrashIcon } from './icons/TrashIcon';
 import { SpeakerIcon } from './icons/SpeakerIcon';
+import { BookIcon } from './icons/BookIcon';
 
 interface ControlsProps {
   activeFretboard: FretboardInstance;
@@ -32,6 +33,7 @@ interface ControlsProps {
   onStrum: () => void;
   favorites: string[];
   onToggleFavorite: (structureKey: string) => void;
+  onOpenCatalog: () => void;
 }
 
 const CollapsibleSection: React.FC<{ title: string; isOpen: boolean; onToggle: () => void; children: React.ReactNode }> = ({ title, isOpen, onToggle, children }) => (
@@ -252,6 +254,14 @@ const Controls: React.FC<ControlsProps> = (props) => {
                 title={props.favorites.includes(props.activeFretboard.globalStructure) ? 'Remove from favorites' : 'Add to favorites'}
               >
                 ★
+              </button>
+              {/* Scale Catalog button */}
+              <button
+                onClick={props.onOpenCatalog}
+                className="px-2.5 rounded-lg border border-gray-700 bg-gray-900 text-gray-400 hover:text-cyan-400 hover:border-cyan-500/50 transition-all"
+                title="Scale Catalog"
+              >
+                <BookIcon className="w-4 h-4" />
               </button>
             </div>
             {props.detectedStructureName && (

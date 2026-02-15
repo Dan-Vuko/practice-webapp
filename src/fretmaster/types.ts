@@ -78,3 +78,35 @@ export interface FretboardInstance {
   stringGroups: StringGroup[];
   activeGroupId: string | null;
 }
+
+export interface CatalogScale {
+  n: number;
+  name: string;
+  pcs: number[];
+  iv: number[];
+  card: number;
+  modes: number;
+  prime: boolean;
+  primeNum: number;
+  sym: boolean;
+  modeList: { m: number; n: number; name: string }[];
+  directChildren: number[];
+  directParents: number[];
+  complement: number;
+  inverse: number;
+}
+
+export interface CatalogData {
+  nameMap: Record<string, string>;
+  scales: CatalogScale[];
+}
+
+export interface ScaleFilters {
+  search: string;
+  showPrimeOnly: boolean;
+  showSymmetric: boolean;
+  showChords: boolean;
+  showHexatonic: boolean;
+  showFavourites: boolean;
+  noteCount: number | null;
+}
