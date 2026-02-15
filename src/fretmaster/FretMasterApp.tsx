@@ -3,7 +3,7 @@ import FretboardContainer from './components/FretboardContainer';
 import Controls from './components/Controls';
 import ScaleCatalog from './components/ScaleCatalog';
 import { PlusIcon } from './components/icons/PlusIcon';
-import { TUNINGS, FRET_COUNT, STRUCTURES, RING_COLOR_PALETTE, SARGAM_NAMES, INTERVAL_NAMES, INTERVAL_COLORS, DEFAULT_THEME, ROMAN_DEGREES } from './constants';
+import { TUNINGS, FRET_COUNT, STRUCTURES, RING_COLOR_PALETTE, SARGAM_NAMES, INTERVAL_NAMES, INTERVAL_COLORS, DEFAULT_THEME, ROMAN_DEGREES, SCALE_NAME_OVERRIDES } from './constants';
 import type { Tuning, HighlightedNote, Color, RingColor, SavedPattern, Structure, StringGroup, Instrument, FretboardInstance, CatalogScale, CatalogData, CustomPreset } from './types';
 import { getNoteOnFret, getIntervalFromRoot, midiToFrequency } from './utils/music';
 import { playNote } from './utils/audio';
@@ -125,11 +125,19 @@ const App: React.FC = () => {
     // Load catalog data
     fetch('/data/catalog.json')
       .then(r => r.json())
-      .then((data: CatalogData) => setCatalogData(data))
+      .then((data: CatalogData) => {
+        // Apply Barry Harris name overrides
+        for (const [key, name] of Object.entries(SCALE_NAME_OVERRIDES)) {
+          if (data.nameMap[key]) data.nameMap[key] = name;
+          const scale = data.scales.find(s => s.n === Number(key));
+          if (scale) scale.name = name;
+        }
+        setCatalogData(data);
+      })
       .catch(e => console.error('Failed to load catalog:', e));
 
     // Load catalog favourites from localStorage
-    const BH_DEFAULTS = [2997, 2989, 3509, 3445]; // Maj6Dim, Min6Dim, Dom7Dim, Dom7b5Dim
+    const BH_DEFAULTS = [2997, 2781, 2989, 3501, 3437, 3509, 3445, 1773, 1757, 1883];
     try {
       const stored = localStorage.getItem('fretmaster_catalog_favourites');
       if (stored) {

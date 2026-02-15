@@ -454,6 +454,20 @@ const CHORDS_BASE: Record<string, Record<string, Structure>> = {
         { bgColor: 'bg-blue-500', textColor: 'text-white' }    // b7 (10) - Min6
       ]
     },
+    dom7_diminished: {
+      name: 'Dominant 7 Diminished',
+      intervals: [0, 2, 4, 5, 7, 8, 10, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
+      colors: [
+        { bgColor: 'bg-blue-500', textColor: 'text-white', ringClassName: 'ring-yellow-400' },  // R (0) - Dom7
+        { bgColor: 'bg-red-500', textColor: 'text-white' },   // 2 (2) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },  // 3 (4) - Dom7
+        { bgColor: 'bg-red-500', textColor: 'text-white' },   // 4 (5) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },  // 5 (7) - Dom7
+        { bgColor: 'bg-red-500', textColor: 'text-white' },   // b6 (8) - Dim7
+        { bgColor: 'bg-blue-500', textColor: 'text-white' },  // b7 (10) - Dom7
+        { bgColor: 'bg-red-500', textColor: 'text-white' }    // 7 (11) - Dim7
+      ]
+    },
     dom7b5_diminished: {
       name: 'Dominant 7♭5 Diminished',
       intervals: [0, 2, 4, 5, 6, 8, 10, 11].map(i => ({ interval: i, name: INTERVAL_NAMES[i] })),
@@ -1018,3 +1032,12 @@ Object.values(FIVE_NOTE_CHORDS).forEach(category => Object.values(category).forE
 Object.values(CHROMATIC_SCALES).forEach(category => Object.values(category).forEach(assignColors));
 
 export const CATEGORIZED_STRUCTURES = { ...CHORDS_BASE, ...FIVE_NOTE_CHORDS, ...CHROMATIC_SCALES };
+
+export const SCALE_NAME_OVERRIDES: Record<string, string> = {
+  '2781': 'Maj9 Diminished (6 on 5th)',
+  '3501': 'm7 Diminished (6 on b3)',
+  '3437': 'm7b5 Diminished (m6 on b3)',
+  '1773': '7sus4 Diminished (6 on b7)',
+  '1757': 'Dom9 Diminished (m6 on 5th)',
+  '1883': '7alt Diminished (m6 on b2)',
+};

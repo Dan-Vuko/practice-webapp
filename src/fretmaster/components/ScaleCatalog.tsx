@@ -66,8 +66,11 @@ const TETRAD_MAP = new Map(COMMON_TETRADS.map(t => [t.id, t]));
 const COMMON_TRIAD_RINGS = new Set(COMMON_TRIADS.map(t => pcsToRing(t.pcs)));
 const COMMON_TETRAD_RINGS = new Set(COMMON_TETRADS.map(t => pcsToRing(t.pcs)));
 
-// The 4 core Barry Harris scales only
-const BARRY_HARRIS_SCALES = new Set([2997, 2989, 3509, 3445]);
+// All 10 Barry Harris chord scales
+const BARRY_HARRIS_SCALES = new Set([
+  2997, 2989, 3509, 3445,           // Core 4 (Maj6, Min6, Dom7, Dom7b5)
+  2781, 3501, 3437, 1773, 1757, 1883 // Extended 6 (6th chord rules)
+]);
 
 function isBarryHarrisScale(scale: CatalogScale): boolean {
   return BARRY_HARRIS_SCALES.has(scale.n);

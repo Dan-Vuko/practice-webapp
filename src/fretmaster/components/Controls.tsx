@@ -8,14 +8,41 @@ import { BookIcon } from './icons/BookIcon';
 
 const FRETBOARD_PRESETS = [
   {
-    id: 'bh_all_4',
-    name: 'Barry Harris (All 4)',
-    description: 'Maj6, Min6, Dom7, Dom7\u266D5 Dim \u2014 Root D',
+    id: 'bh_major',
+    name: 'BH Major (2)',
+    description: 'Maj6 on Root, Maj6 on 5th \u2014 Root D',
     fretboards: [
-      { name: 'Maj6 Dim', rootNote: 'D', structureKey: 'catalog_2997', pcs: [0,2,4,5,7,8,9,11] },
-      { name: 'Min6 Dim', rootNote: 'D', structureKey: 'catalog_2989', pcs: [0,2,3,5,7,8,9,11] },
-      { name: 'Dom7 Dim', rootNote: 'D', structureKey: 'catalog_3509', pcs: [0,2,4,5,7,8,10,11] },
-      { name: 'Dom7\u266D5 Dim', rootNote: 'D', structureKey: 'catalog_3445', pcs: [0,2,4,5,6,8,10,11] },
+      { name: 'Maj6',  rootNote: 'D', structureKey: 'sixth_diminished',   pcs: [0,2,4,5,7,8,9,11] },
+      { name: 'Maj9',  rootNote: 'D', structureKey: 'maj9_sixth',         pcs: [0,2,3,4,6,7,9,11] },
+    ],
+  },
+  {
+    id: 'bh_minor',
+    name: 'BH Minor (3)',
+    description: 'Min6, m7, m7b5 \u2014 Root D',
+    fretboards: [
+      { name: 'Min6',  rootNote: 'D', structureKey: 'minor_sixth_diminished', pcs: [0,2,3,5,7,8,9,11] },
+      { name: 'Min7',  rootNote: 'D', structureKey: 'm7_sixth',               pcs: [0,2,3,5,7,8,10,11] },
+      { name: 'm7b5',  rootNote: 'D', structureKey: 'm7b5_sixth',             pcs: [0,2,3,5,6,8,10,11] },
+    ],
+  },
+  {
+    id: 'bh_dom_root',
+    name: 'BH Dominant \u2014 Root (2)',
+    description: 'Dom7, Dom7\u266D5 \u2014 Root D',
+    fretboards: [
+      { name: 'Dom7',    rootNote: 'D', structureKey: 'dom7_diminished',    pcs: [0,2,4,5,7,8,10,11] },
+      { name: 'Dom7\u266D5', rootNote: 'D', structureKey: 'dom7b5_diminished',  pcs: [0,2,4,5,6,8,10,11] },
+    ],
+  },
+  {
+    id: 'bh_dom_ext',
+    name: 'BH Dominant \u2014 Extended (3)',
+    description: '7sus4, Dom9, 7alt \u2014 Root D',
+    fretboards: [
+      { name: '7sus4',  rootNote: 'D', structureKey: 'dom7sus4_sixth', pcs: [0,2,3,5,6,7,9,10] },
+      { name: 'Dom9',   rootNote: 'D', structureKey: 'dom9_sixth',    pcs: [0,2,3,4,6,7,9,10] },
+      { name: '7alt',   rootNote: 'D', structureKey: 'dom7alt_sixth', pcs: [0,1,3,4,6,8,9,10] },
     ],
   },
 ];
