@@ -23,12 +23,50 @@ const DEFAULT_FILTERS: ScaleFilters = {
   showSymmetric: false,
   showChords: false,
   showHexatonic: false,
+  showBarryHarris: false,
   showFavourites: false,
   noteCount: null,
 };
 
+// Three diminished 7th chords
+const DIM7_CHORDS = [
+  [0, 3, 6, 9],
+  [1, 4, 7, 10],
+  [2, 5, 8, 11],
+];
+
+function isBarryHarrisScale(scale: CatalogScale): boolean {
+  if (scale.card !== 8) return false;
+  const pcsSet = new Set(scale.pcs);
+  return DIM7_CHORDS.some(dim => dim.every(pc => pcsSet.has(pc)));
+}
+
 function formatIntervals(pcs: number[]): string {
   return pcs.map(pc => INTERVAL_NAMES[pc % 12]).join(' ');
+}
+
+/** Enumerate all k-element subsets of arr that include arr[0] (the root) */
+function subsetsFromRoot(pcs: number[], k: number): number[][] {
+  if (k < 1 || pcs.length < k) return [];
+  const results: number[][] = [];
+  const rest = pcs.slice(1);
+  // Root is always included, pick k-1 from the rest
+  function combo(start: number, chosen: number[]) {
+    if (chosen.length === k - 1) {
+      results.push([pcs[0], ...chosen]);
+      return;
+    }
+    for (let i = start; i < rest.length; i++) {
+      combo(i + 1, [...chosen, rest[i]]);
+    }
+  }
+  combo(0, []);
+  return results;
+}
+
+/** Compute Ian Ring number from pitch class set */
+function pcsToRing(pcs: number[]): number {
+  return pcs.reduce((sum, pc) => sum + (1 << pc), 0);
 }
 
 const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
@@ -60,6 +98,7 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
       if (filters.showSymmetric && !scale.sym) return false;
       if (filters.showChords && (scale.card < 2 || scale.card > 4)) return false;
       if (filters.showHexatonic && scale.card !== 6) return false;
+      if (filters.showBarryHarris && !isBarryHarrisScale(scale)) return false;
       if (filters.showFavourites && !favouriteSet.has(scale.n)) return false;
       if (filters.noteCount !== null && scale.card !== filters.noteCount) return false;
       return true;
@@ -80,13 +119,11 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
       groups.get(modeCount)!.push(scale);
     }
 
-    // Sort within each group alphabetically
     for (const [, arr] of groups) {
       arr.sort((a, b) => a.name.localeCompare(b.name));
     }
     favScales.sort((a, b) => a.name.localeCompare(b.name));
 
-    // Sort groups by mode count
     const sortedGroups = [...groups.entries()].sort((a, b) => a[0] - b[0]);
 
     return { favScales, sortedGroups };
@@ -103,7 +140,6 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
 
   const navigateToScale = useCallback((scaleNumber: number) => {
     setExpandedScale(scaleNumber);
-    // Ensure the group containing this scale is expanded
     const scale = scaleMap.get(scaleNumber);
     if (scale) {
       setCollapsedGroups(prev => {
@@ -112,7 +148,6 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
         return next;
       });
     }
-    // Scroll after render
     setTimeout(() => {
       expandedRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 50);
@@ -123,7 +158,6 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
     navigateToScale(scaleNumber);
   }, [navigateToScale]);
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -139,12 +173,15 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
-  const toggleFilter = (key: 'showPrimeOnly' | 'showSymmetric' | 'showChords' | 'showHexatonic' | 'showFavourites') => {
+  type FilterKey = 'showPrimeOnly' | 'showSymmetric' | 'showChords' | 'showHexatonic' | 'showBarryHarris' | 'showFavourites';
+
+  const toggleFilter = (key: FilterKey) => {
     setFilters(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const filterChips: { key: 'showPrimeOnly' | 'showSymmetric' | 'showChords' | 'showHexatonic' | 'showFavourites'; label: string }[] = [
+  const filterChips: { key: FilterKey; label: string }[] = [
     { key: 'showFavourites', label: 'Favourites' },
+    { key: 'showBarryHarris', label: 'Barry Harris' },
     { key: 'showPrimeOnly', label: 'Prime Only' },
     { key: 'showSymmetric', label: 'Symmetric' },
     { key: 'showChords', label: 'Chords (2-4)' },
@@ -325,6 +362,32 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
   nameMap,
   expandedRef,
 }) => {
+  // Compute triads and tetrads from root (only when expanded)
+  const chordsFromRoot = useMemo(() => {
+    if (!isExpanded || scale.card < 3) return { triads: [], tetrads: [] };
+
+    const triads: { pcs: number[]; ring: number; name: string }[] = [];
+    const tetrads: { pcs: number[]; ring: number; name: string }[] = [];
+
+    // Triads from root
+    for (const subset of subsetsFromRoot(scale.pcs, 3)) {
+      const ring = pcsToRing(subset);
+      const name = nameMap[String(ring)] || '';
+      triads.push({ pcs: subset, ring, name });
+    }
+
+    // Tetrads from root
+    if (scale.card >= 4) {
+      for (const subset of subsetsFromRoot(scale.pcs, 4)) {
+        const ring = pcsToRing(subset);
+        const name = nameMap[String(ring)] || '';
+        tetrads.push({ pcs: subset, ring, name });
+      }
+    }
+
+    return { triads, tetrads };
+  }, [isExpanded, scale.pcs, scale.card, nameMap]);
+
   return (
     <div ref={expandedRef} className="bg-gray-900/50 rounded-md">
       {/* Row header */}
@@ -364,8 +427,47 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
           <div className="flex gap-2 flex-wrap">
             {scale.prime && <span className="px-2 py-0.5 rounded text-xs bg-green-900/50 text-green-400">Prime</span>}
             {scale.sym && <span className="px-2 py-0.5 rounded text-xs bg-purple-900/50 text-purple-400">Symmetric</span>}
+            {isBarryHarrisScale(scale) && <span className="px-2 py-0.5 rounded text-xs bg-blue-900/50 text-blue-400">Barry Harris</span>}
             {!scale.prime && <span className="text-xs text-gray-500">Prime form: {nameMap[String(scale.primeNum)] || `#${scale.primeNum}`} (#{scale.primeNum})</span>}
           </div>
+
+          {/* Triads from Root */}
+          {chordsFromRoot.triads.length > 0 && (
+            <div>
+              <span className="text-xs text-gray-400 uppercase tracking-wider">Triads from Root ({chordsFromRoot.triads.length})</span>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {chordsFromRoot.triads.map(chord => (
+                  <button
+                    key={chord.ring}
+                    onClick={() => onNavigate(chord.ring)}
+                    className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
+                    title={`[${chord.pcs.map(pc => INTERVAL_NAMES[pc]).join(', ')}]`}
+                  >
+                    {chord.name || `#${chord.ring}`} <span className="text-gray-500">{chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tetrads from Root */}
+          {chordsFromRoot.tetrads.length > 0 && (
+            <div>
+              <span className="text-xs text-gray-400 uppercase tracking-wider">Tetrads from Root ({chordsFromRoot.tetrads.length})</span>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {chordsFromRoot.tetrads.map(chord => (
+                  <button
+                    key={chord.ring}
+                    onClick={() => onNavigate(chord.ring)}
+                    className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
+                    title={`[${chord.pcs.map(pc => INTERVAL_NAMES[pc]).join(', ')}]`}
+                  >
+                    {chord.name || `#${chord.ring}`} <span className="text-gray-500">{chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Modes */}
           {scale.modeList.length > 0 && (

@@ -70,9 +70,16 @@ const App: React.FC = () => {
       .catch(e => console.error('Failed to load catalog:', e));
 
     // Load catalog favourites from localStorage
+    // Auto-favourite the 4 core Barry Harris scales on first load
+    const BH_DEFAULTS = [2997, 2989, 3445, 3507]; // Maj6Dim, Min6Dim, Dom7b5Dim, PhrygDomBebop
     try {
       const stored = localStorage.getItem('fretmaster_catalog_favourites');
-      if (stored) setCatalogFavourites(JSON.parse(stored));
+      if (stored) {
+        setCatalogFavourites(JSON.parse(stored));
+      } else {
+        setCatalogFavourites(BH_DEFAULTS);
+        localStorage.setItem('fretmaster_catalog_favourites', JSON.stringify(BH_DEFAULTS));
+      }
     } catch (e) { console.error(e); }
   }, []);
 

@@ -107,6 +107,7 @@ export interface ScaleFilters {
   showSymmetric: boolean;
   showChords: boolean;
   showHexatonic: boolean;
+  showBarryHarris: boolean;
   showFavourites: boolean;
   noteCount: number | null;
 }
