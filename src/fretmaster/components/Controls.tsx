@@ -65,8 +65,6 @@ const Controls: React.FC<ControlsProps> = (props) => {
   });
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [newPatternName, setNewPatternName] = useState('');
-  const [isSaveStructureModalOpen, setIsSaveStructureModalOpen] = useState(false);
-  const [newStructureName, setNewStructureName] = useState('');
 
   const allStructures = useMemo(() => ({ ...STRUCTURES, ...props.customStructures }), [props.customStructures]);
   const currentStructure = allStructures[props.activeFretboard.globalStructure];
@@ -212,58 +210,59 @@ const Controls: React.FC<ControlsProps> = (props) => {
 
       <CollapsibleSection title="Theory" isOpen={openSections.structure} onToggle={() => toggleSection('structure')}>
         <div className="space-y-2">
+          {/* Catalog & Favorite buttons row */}
+          <div className="flex gap-2">
+            <button
+              onClick={props.onOpenCatalog}
+              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-gray-700 bg-gray-900 text-gray-400 hover:text-cyan-400 hover:border-cyan-500/50 transition-all text-[10px] font-bold uppercase"
+              title="Scale Catalog"
+            >
+              <BookIcon className="w-3.5 h-3.5" />
+              Scale Catalog
+            </button>
+            <button
+              onClick={() => props.onToggleFavorite(props.activeFretboard.globalStructure)}
+              className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-[10px] font-bold uppercase ${
+                props.favorites.includes(props.activeFretboard.globalStructure)
+                  ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400'
+                  : 'bg-gray-900 border-gray-700 text-gray-500 hover:text-yellow-400 hover:border-yellow-500/50'
+              }`}
+              title={props.favorites.includes(props.activeFretboard.globalStructure) ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              ★ Fav
+            </button>
+          </div>
+
           <div>
             <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Visualization</label>
-            <div className="flex gap-2 mb-2">
-              <select
-                value={props.activeFretboard.globalStructure}
-                onChange={(e) => props.updateActiveFretboard({ globalStructure: e.target.value })}
-                className="flex-1 bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white"
-              >
-                {/* Favorites at top */}
-                {props.favorites.length > 0 && (
-                  <optgroup label="★ Favorites">
-                    {props.favorites.map(key => {
-                      const structure = allStructures[key];
-                      if (!structure) return null;
-                      return <option key={`fav-${key}`} value={key}>★ {structure.name}</option>;
-                    })}
-                  </optgroup>
-                )}
-                {Object.entries(CATEGORIZED_STRUCTURES).map(([categoryName, categoryStructures]) => (
-                  <optgroup key={categoryName} label={categoryName}>
-                    {Object.entries(categoryStructures).map(([key, structure]) => (
-                      <option key={key} value={key}>{structure.name}</option>
-                    ))}
-                  </optgroup>
-                ))}
-                {Object.keys(props.customStructures).length > 0 && (
-                  <optgroup label="Custom">
-                    {Object.entries(props.customStructures).map(([key, structure]) => <option key={key} value={key}>{structure.name}</option>)}
-                  </optgroup>
-                )}
-              </select>
-              {/* Favorite toggle button */}
-              <button
-                onClick={() => props.onToggleFavorite(props.activeFretboard.globalStructure)}
-                className={`px-3 rounded-lg border transition-all ${
-                  props.favorites.includes(props.activeFretboard.globalStructure)
-                    ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400'
-                    : 'bg-gray-900 border-gray-700 text-gray-500 hover:text-yellow-400 hover:border-yellow-500/50'
-                }`}
-                title={props.favorites.includes(props.activeFretboard.globalStructure) ? 'Remove from favorites' : 'Add to favorites'}
-              >
-                ★
-              </button>
-              {/* Scale Catalog button */}
-              <button
-                onClick={props.onOpenCatalog}
-                className="px-2.5 rounded-lg border border-gray-700 bg-gray-900 text-gray-400 hover:text-cyan-400 hover:border-cyan-500/50 transition-all"
-                title="Scale Catalog"
-              >
-                <BookIcon className="w-4 h-4" />
-              </button>
-            </div>
+            <select
+              value={props.activeFretboard.globalStructure}
+              onChange={(e) => props.updateActiveFretboard({ globalStructure: e.target.value })}
+              className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white"
+            >
+              {/* Favorites at top */}
+              {props.favorites.length > 0 && (
+                <optgroup label="★ Favorites">
+                  {props.favorites.map(key => {
+                    const structure = allStructures[key];
+                    if (!structure) return null;
+                    return <option key={`fav-${key}`} value={key}>★ {structure.name}</option>;
+                  })}
+                </optgroup>
+              )}
+              {Object.entries(CATEGORIZED_STRUCTURES).map(([categoryName, categoryStructures]) => (
+                <optgroup key={categoryName} label={categoryName}>
+                  {Object.entries(categoryStructures).map(([key, structure]) => (
+                    <option key={key} value={key}>{structure.name}</option>
+                  ))}
+                </optgroup>
+              ))}
+              {Object.keys(props.customStructures).length > 0 && (
+                <optgroup label="Custom">
+                  {Object.entries(props.customStructures).map(([key, structure]) => <option key={key} value={key}>{structure.name}</option>)}
+                </optgroup>
+              )}
+            </select>
             {props.detectedStructureName && (
               <div className="px-2 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded text-[10px] text-cyan-400 font-bold text-center animate-pulse">
                 DETECTED: {props.detectedStructureName}
@@ -287,13 +286,6 @@ const Controls: React.FC<ControlsProps> = (props) => {
             })}
           </div>
 
-          <button 
-            onClick={() => setIsSaveStructureModalOpen(true)}
-            className="w-full text-[9px] uppercase font-black bg-cyan-600/10 text-cyan-400 border border-cyan-400/20 py-2 rounded-lg hover:bg-cyan-600/20 transition-all"
-            disabled={visibleIntervals.size === 0}
-          >
-            Save as Custom Scale
-          </button>
         </div>
       </CollapsibleSection>
 
@@ -402,19 +394,6 @@ const Controls: React.FC<ControlsProps> = (props) => {
         </div>
       )}
 
-      {/* Save Modal for Custom Scales */}
-      {isSaveStructureModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={() => setIsSaveStructureModalOpen(false)}>
-          <div className="bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-xs border border-gray-700" onClick={e => e.stopPropagation()}>
-            <h3 className="text-sm font-black text-white mb-4 tracking-tight uppercase italic">Save Custom Scale</h3>
-            <input type="text" value={newStructureName} onChange={e => setNewStructureName(e.target.value)} placeholder="Phrygian Dominant..." className="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white text-xs outline-none" autoFocus />
-            <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => setIsSaveStructureModalOpen(false)} className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase">Cancel</button>
-              <button onClick={() => { if(newStructureName.trim()){ props.onSaveCustomStructure(newStructureName.trim()); setIsSaveStructureModalOpen(false); setNewStructureName(''); } }} className="bg-cyan-600 px-6 py-2 rounded-xl text-[10px] font-bold text-white uppercase shadow-lg">Save</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
