@@ -10,3 +10,6 @@ dist/
 # Environment files
 .env
 .env*.local
+
+# Ian Ring raw data (too large for repo)
+fretmaster/ianring/

@@ -1,11 +1,12 @@
 
 import React, { useState, useMemo } from 'react';
-import type { Tuning, Color, RingColor, StructureLabelType, StructureKey, SavedPattern, Structure, StringGroup, Instrument, HexatonicPatternId } from '../types';
+import type { Tuning, Color, RingColor, StructureLabelType, StructureKey, SavedPattern, Structure, StringGroup, Instrument, HexatonicPatternId, CatalogScale } from '../types';
 import { TUNINGS, KEYS, COLOR_PALETTE, RING_COLOR_PALETTE, STRUCTURES, CATEGORIZED_STRUCTURES, INTERVAL_NAMES, HEXATONIC_PATTERNS } from '../constants';
 import { InfoIcon } from './icons/InfoIcon';
 import { ChevronIcon } from './icons/ChevronIcon';
 import { TrashIcon } from './icons/TrashIcon';
 import { SpeakerIcon } from './icons/SpeakerIcon';
+import { BookIcon } from './icons/BookIcon';
 
 interface ControlsProps {
   tuning: Tuning;
@@ -29,7 +30,6 @@ interface ControlsProps {
   onLoadPattern: (id: string) => void;
   onDeletePattern: (id: string) => void;
   customStructures: Record<string, Structure>;
-  onSaveCustomStructure: (name: string) => void;
   onDeleteCustomStructure: (id: string) => void;
   detectedStructureName: string | null;
   isAdvancedMode: boolean;
@@ -49,6 +49,10 @@ interface ControlsProps {
   onExport: () => void;
   hexatonicPattern: HexatonicPatternId;
   setHexatonicPattern: (pattern: HexatonicPatternId) => void;
+  favourites: number[];
+  catalogScales: CatalogScale[];
+  nameMap: Record<string, string>;
+  onOpenCatalog: () => void;
 }
 
 const CollapsibleSection: React.FC<{ title: string; isOpen: boolean; onToggle: () => void; children: React.ReactNode }> = ({ title, isOpen, onToggle, children }) => (
@@ -91,7 +95,6 @@ const Controls: React.FC<ControlsProps> = ({
   onLoadPattern,
   onDeletePattern,
   customStructures,
-  onSaveCustomStructure,
   onDeleteCustomStructure,
   detectedStructureName,
   isAdvancedMode,
@@ -110,7 +113,11 @@ const Controls: React.FC<ControlsProps> = ({
   setInstrument,
   onExport,
   hexatonicPattern,
-  setHexatonicPattern
+  setHexatonicPattern,
+  favourites,
+  catalogScales,
+  nameMap,
+  onOpenCatalog,
 }) => {
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     setup: true,
@@ -122,18 +129,21 @@ const Controls: React.FC<ControlsProps> = ({
   });
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [newPatternName, setNewPatternName] = useState('');
-  const [isSaveStructureModalOpen, setIsSaveStructureModalOpen] = useState(false);
-  const [newStructureName, setNewStructureName] = useState('');
 
   const allStructures = useMemo(() => ({ ...STRUCTURES, ...customStructures }), [customStructures]);
   const currentStructure = allStructures[selectedStructure];
-  
+
   const structureIntervals = useMemo(() => {
     if (!currentStructure) return new Set<number>();
     return new Set(currentStructure.intervals.map(i => i.interval % 12));
   }, [selectedStructure, allStructures]);
 
-  // Fix: Explicitly cast Object.entries to ensure 't' is recognized as Tuning type to fix 'unknown' property access errors.
+  // Build favourite structures for the dropdown
+  const favouriteStructures = useMemo(() => {
+    const favSet = new Set(favourites);
+    return catalogScales.filter(s => favSet.has(s.n));
+  }, [favourites, catalogScales]);
+
   const tuningKey = useMemo(() => {
     const entries = Object.entries(TUNINGS) as [string, Tuning][];
     const match = entries.find(([, t]) => t.name === tuning.name);
@@ -152,14 +162,6 @@ const Controls: React.FC<ControlsProps> = ({
     }
   };
 
-  const handleSaveStructure = () => {
-    if (newStructureName.trim()) {
-      onSaveCustomStructure(newStructureName.trim());
-      setNewStructureName('');
-      setIsSaveStructureModalOpen(false);
-    }
-  };
-  
   const labelOptions: { id: StructureLabelType, name: string }[] = [
     { id: 'interval', name: 'Intervals' },
     { id: 'noteName', name: 'Notes' },
@@ -169,7 +171,7 @@ const Controls: React.FC<ControlsProps> = ({
   return (
     <div className="w-full lg:w-80 bg-gray-800 p-4 rounded-lg shadow-2xl flex flex-col gap-4 overflow-y-auto">
       <h2 className="text-2xl font-bold text-center mb-2">Controls</h2>
-      
+
       <CollapsibleSection title="Fretboard Setup" isOpen={openSections.setup} onToggle={() => toggleSection('setup')}>
         <div className="space-y-3">
           <div>
@@ -193,7 +195,6 @@ const Controls: React.FC<ControlsProps> = ({
               onChange={(e) => setTuning(TUNINGS[e.target.value as keyof typeof TUNINGS])}
               className="w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-cyan-500 focus:border-cyan-500"
             >
-              {/* Fix: Cast Object.entries(TUNINGS) to [string, Tuning][] to avoid unknown property errors when accessing .name. */}
               {(Object.entries(TUNINGS) as [string, Tuning][]).map(([key, t]) => (
                 <option key={key} value={key}>{t.name}</option>
               ))}
@@ -211,7 +212,7 @@ const Controls: React.FC<ControlsProps> = ({
                <SpeakerIcon className="w-5 h-5" enabled={isSoundEnabled} />
              </button>
           </div>
-          
+
            {isSoundEnabled && (
             <div>
                <label className="block text-xs text-gray-400 mb-1">Instrument</label>
@@ -227,9 +228,13 @@ const Controls: React.FC<ControlsProps> = ({
                </select>
             </div>
           )}
+        </div>
+      </CollapsibleSection>
 
-           {/* Advanced Mode Toggle */}
-           <div className="flex items-center justify-between pt-2">
+      <CollapsibleSection title="Structure Visualization" isOpen={openSections.structure} onToggle={() => toggleSection('structure')}>
+        <div className="space-y-4">
+          {/* Advanced Mode Toggle - moved here from Fretboard Setup */}
+          <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-gray-300">Advanced Mode</span>
              <button
                 role="switch"
@@ -239,20 +244,35 @@ const Controls: React.FC<ControlsProps> = ({
              >
                <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ${isAdvancedMode ? 'translate-x-6' : 'translate-x-1'}`} />
              </button>
-           </div>
-        </div>
-      </CollapsibleSection>
+          </div>
 
-      <CollapsibleSection title="Structure Visualization" isOpen={openSections.structure} onToggle={() => toggleSection('structure')}>
-        <div className="space-y-4">
           <div>
-            <label htmlFor="structure-select" className="block text-sm font-medium text-gray-300 mb-1">Chord/Scale Type</label>
+            <div className="flex items-center gap-2 mb-1">
+              <label htmlFor="structure-select" className="block text-sm font-medium text-gray-300">Chord/Scale Type</label>
+              <button
+                onClick={onOpenCatalog}
+                className="p-1.5 rounded-md bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-cyan-400 transition-colors relative group"
+                title="Scale Catalog"
+              >
+                <BookIcon className="w-4 h-4" />
+                <span className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                  Scale Catalog
+                </span>
+              </button>
+            </div>
             <select
               id="structure-select"
               value={selectedStructure}
               onChange={(e) => setSelectedStructure(e.target.value)}
               className="w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-cyan-500 focus:border-cyan-500"
             >
+              {favouriteStructures.length > 0 && (
+                <optgroup label="Favourites">
+                  {favouriteStructures.map(s => (
+                    <option key={`fav_${s.n}`} value={`catalog_${s.n}`}>{s.name || `Scale #${s.n}`}</option>
+                  ))}
+                </optgroup>
+              )}
               {Object.entries(CATEGORIZED_STRUCTURES).map(([category, structures]) => (
                 <optgroup key={category} label={category}>
                   {Object.entries(structures).map(([key, structure]: [string, Structure]) => (
@@ -325,8 +345,8 @@ const Controls: React.FC<ControlsProps> = ({
                 const isChecked = visibleIntervals.has(index);
                 const isInStructure = structureIntervals.has(index);
                 return (
-                  <label 
-                    key={index} 
+                  <label
+                    key={index}
                     className={`flex items-center space-x-2 p-1.5 rounded-md cursor-pointer transition-colors ${isChecked ? 'bg-gray-900' : 'bg-gray-700/60 hover:bg-gray-600/80'}`}
                   >
                     <input
@@ -344,15 +364,8 @@ const Controls: React.FC<ControlsProps> = ({
               <button onClick={() => setAllIntervalsVisibility(true)} className="flex-1 text-sm bg-gray-600 hover:bg-gray-500 text-white font-semibold py-1.5 px-3 rounded-md transition-colors">Select All</button>
               <button onClick={() => setAllIntervalsVisibility(false)} className="flex-1 text-sm bg-gray-600 hover:bg-gray-500 text-white font-semibold py-1.5 px-3 rounded-md transition-colors">Deselect All</button>
             </div>
-            <button 
-              onClick={() => setIsSaveStructureModalOpen(true)}
-              className="w-full text-sm bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-1.5 px-3 rounded-md transition-colors mt-3 disabled:bg-gray-500 disabled:cursor-not-allowed"
-              disabled={visibleIntervals.size === 0}
-            >
-              Save Current as Custom Structure
-            </button>
           </div>
-          
+
            <div className="pt-2 border-t border-gray-600/50">
              <button
                onClick={onExport}
@@ -431,7 +444,7 @@ const Controls: React.FC<ControlsProps> = ({
             ))}
           </div>
         </div>
-        
+
         <div className="flex gap-2 mt-6">
           <button
             onClick={resetManualNotes}
@@ -455,14 +468,14 @@ const Controls: React.FC<ControlsProps> = ({
           ) : (
             savedPatterns.map((pattern: SavedPattern) => (
               <div key={pattern.id} className="flex items-center justify-between bg-gray-900/50 p-2 rounded-md group">
-                <button 
+                <button
                   onClick={() => onLoadPattern(pattern.id)}
                   className="text-left flex-1 hover:text-cyan-400 transition-colors"
                 >
                   <span className="font-semibold">{pattern.name}</span>
                   <span className="text-xs text-gray-400 block">{pattern.rootNote} Root - {pattern.tuning.name}</span>
                 </button>
-                <button 
+                <button
                   onClick={() => onDeletePattern(pattern.id)}
                   className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                   aria-label={`Delete pattern ${pattern.name}`}
@@ -483,7 +496,7 @@ const Controls: React.FC<ControlsProps> = ({
             Object.entries(customStructures).map(([id, structure]: [string, Structure]) => (
               <div key={id} className="flex items-center justify-between bg-gray-900/50 p-2 rounded-md group">
                 <span className="font-semibold flex-1">{structure.name}</span>
-                <button 
+                <button
                   onClick={() => onDeleteCustomStructure(id)}
                   className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                   aria-label={`Delete structure ${structure.name}`}
@@ -520,38 +533,6 @@ const Controls: React.FC<ControlsProps> = ({
                 onClick={handleSavePattern}
                 className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-gray-500"
                 disabled={!newPatternName.trim()}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isSaveStructureModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setIsSaveStructureModalOpen(false)}>
-          <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-bold mb-4">Save Custom Structure</h3>
-            <input
-              type="text"
-              value={newStructureName}
-              onChange={e => setNewStructureName(e.target.value)}
-              placeholder="Enter structure name..."
-              className="w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-cyan-500 focus:border-cyan-500"
-              autoFocus
-              onKeyDown={e => e.key === 'Enter' && handleSaveStructure()}
-            />
-            <div className="flex justify-end gap-3 mt-4">
-              <button
-                onClick={() => setIsSaveStructureModalOpen(false)}
-                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveStructure}
-                className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-gray-500"
-                disabled={!newStructureName.trim()}
               >
                 Save
               </button>

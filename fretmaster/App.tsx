@@ -2,8 +2,9 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import Fretboard from './components/Fretboard';
 import Controls from './components/Controls';
+import ScaleCatalog from './components/ScaleCatalog';
 import { TUNINGS, KEYS, FRET_COUNT, STRUCTURES, COLOR_PALETTE, RING_COLOR_PALETTE, SARGAM_NAMES, INTERVAL_NAMES, INTERVAL_COLORS } from './constants';
-import type { Tuning, HighlightedNote, Color, RingColor, StructureLabelType, StructureKey, SavedPattern, Structure, StringGroup, Instrument, HexatonicPatternId } from './types';
+import type { Tuning, HighlightedNote, Color, RingColor, StructureLabelType, StructureKey, SavedPattern, Structure, StringGroup, Instrument, HexatonicPatternId, CatalogData, CatalogScale } from './types';
 import { getNoteOnFret, getIntervalFromRoot, midiToFrequency, noteToMidi } from './utils/music';
 import { HEXATONIC_PATTERNS } from './constants';
 import { playNote } from './utils/audio';
@@ -37,11 +38,16 @@ const App: React.FC = () => {
   const [instrument, setInstrument] = useState<Instrument>('sine');
   const [playingKeys, setPlayingKeys] = useState(new Set<string>());
   const [hexatonicPattern, setHexatonicPattern] = useState<HexatonicPatternId>('triad_pair_v_vi');
-  
+
   // Advanced Mode State
   const [isAdvancedMode, setIsAdvancedMode] = useState(false);
   const [stringGroups, setStringGroups] = useState<StringGroup[]>([]);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+
+  // Scale Catalog State
+  const [favourites, setFavourites] = useState<number[]>([]);
+  const [catalogData, setCatalogData] = useState<CatalogData | null>(null);
+  const [isCatalogOpen, setIsCatalogOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -60,6 +66,22 @@ const App: React.FC = () => {
     } catch (error) {
       console.error("Failed to load custom structures from localStorage", error);
     }
+    try {
+      const storedFavourites = localStorage.getItem('scale_favourites');
+      if (storedFavourites) {
+        setFavourites(JSON.parse(storedFavourites));
+      }
+    } catch (error) {
+      console.error("Failed to load favourites from localStorage", error);
+    }
+  }, []);
+
+  // Load catalog data
+  useEffect(() => {
+    fetch('/data/catalog.json')
+      .then(res => res.json())
+      .then((data: CatalogData) => setCatalogData(data))
+      .catch(err => console.error("Failed to load catalog data", err));
   }, []);
 
   const allStructures = useMemo((): Record<string, Structure> => {
@@ -76,7 +98,7 @@ const App: React.FC = () => {
     if (isAdvancedMode) {
       const defaultStructure = allStructures[globalStructure];
       if (!defaultStructure) return;
-      
+
       // Ensure tuning and strings exist before accessing length
       if (!tuning || !tuning.strings) return;
 
@@ -130,10 +152,48 @@ const App: React.FC = () => {
   const updateStructuresLocalStorage = (structures: Record<string, Structure>) => {
     try {
       localStorage.setItem('guitar_structures', JSON.stringify(structures));
-    } catch (error) { 
+    } catch (error) {
       console.error("Failed to save structures to localStorage", error);
     }
   };
+
+  const updateFavouritesLocalStorage = (favs: number[]) => {
+    try {
+      localStorage.setItem('scale_favourites', JSON.stringify(favs));
+    } catch (error) {
+      console.error("Failed to save favourites to localStorage", error);
+    }
+  };
+
+  const toggleFavourite = useCallback((scaleNumber: number) => {
+    setFavourites(prev => {
+      const next = prev.includes(scaleNumber)
+        ? prev.filter(n => n !== scaleNumber)
+        : [...prev, scaleNumber];
+      updateFavouritesLocalStorage(next);
+      return next;
+    });
+  }, []);
+
+  const selectCatalogScale = useCallback((scale: CatalogScale) => {
+    const structureKey = `catalog_${scale.n}`;
+    const newStructure: Structure = {
+      name: scale.name || `Scale #${scale.n}`,
+      intervals: scale.pcs.map(pc => ({
+        interval: pc,
+        name: INTERVAL_NAMES[pc % 12],
+      })),
+      colors: scale.pcs.map(pc => INTERVAL_COLORS[pc % 12]),
+    };
+
+    setCustomStructures(prev => {
+      const updated = { ...prev, [structureKey]: newStructure };
+      updateStructuresLocalStorage(updated);
+      return updated;
+    });
+    setGlobalStructure(structureKey);
+    setIsCatalogOpen(false);
+  }, []);
 
   const savePattern = (name: string) => {
     const newPattern: SavedPattern = {
@@ -168,34 +228,6 @@ const App: React.FC = () => {
     updatePatternsLocalStorage(updatedPatterns);
   };
 
-  const saveCustomStructure = (name: string) => {
-    const intervalsToSave = isAdvancedMode ? activeGroup?.visibleIntervals : visibleIntervals;
-    if (!intervalsToSave || intervalsToSave.size === 0) return;
-
-    // Fix: Explicitly cast to number[] to handle type inference issues with Set conversion and arithmetic operations on line 113.
-    const sortedIntervals = Array.from(intervalsToSave).map(i => i as number).sort((a: number, b: number) => a - b);
-    const newId = `custom_${Date.now()}`;
-    const newStructure: Structure = {
-      name,
-      // Fix: Ensure correct mapping of interval names and colors from sorted numeric intervals on lines 117-118.
-      intervals: sortedIntervals.map(interval => ({
-        interval: interval,
-        name: INTERVAL_NAMES[interval],
-      })),
-      colors: sortedIntervals.map((interval: number) => INTERVAL_COLORS[interval % 12]),
-    };
-
-    const updatedStructures = { ...customStructures, [newId]: newStructure };
-    setCustomStructures(updatedStructures);
-    updateStructuresLocalStorage(updatedStructures);
-    
-    if (isAdvancedMode && activeGroupId) {
-      updateGroup(activeGroupId, { structureKey: newId });
-    } else {
-      setGlobalStructure(newId);
-    }
-  };
-  
   const deleteCustomStructure = (id: string) => {
     const wasActiveStructure = globalStructure === id || stringGroups.some(g => g.structureKey === id);
 
@@ -203,7 +235,7 @@ const App: React.FC = () => {
     delete updatedStructures[id];
     setCustomStructures(updatedStructures);
     updateStructuresLocalStorage(updatedStructures);
-    
+
     if (wasActiveStructure) {
       if (globalStructure === id) setGlobalStructure('major9');
       setStringGroups(prev => prev.map(g => g.structureKey === id ? { ...g, structureKey: 'major9' } : g));
@@ -235,11 +267,11 @@ const App: React.FC = () => {
       setVisibleIntervals(newSet);
     }
   }, [isAdvancedMode, activeGroupId, stringGroups, visibleIntervals]);
-  
+
   const setAllIntervalsVisibility = useCallback((visible: boolean) => {
     const newSet = visible ? new Set(Array.from({ length: 12 }, (_, i) => i)) : new Set<number>();
     if (isAdvancedMode && activeGroupId) {
-      const newStringGroups = stringGroups.map(g => 
+      const newStringGroups = stringGroups.map(g =>
         g.id === activeGroupId ? { ...g, visibleIntervals: newSet } : g
       );
       setStringGroups(newStringGroups);
@@ -284,7 +316,7 @@ const App: React.FC = () => {
       return g;
     }));
   };
-  
+
   const toggleStringInGroup = (groupId: string, stringIndex: number) => {
     setStringGroups(prev => prev.map(g => {
       if (g.id === groupId) {
@@ -347,15 +379,15 @@ const App: React.FC = () => {
           const openNote = tuning.strings[stringIndex];
           for (let fret = group.fretRange.start; fret <= group.fretRange.end; fret++) {
             const noteInfo = getNoteOnFret(openNote, fret);
-            
+
             // Check if note is part of the structure relative to the GROUP's root
             const intervalWithinGroup = getIntervalFromRoot(noteInfo.name, group.rootNote);
-            
+
             if (group.visibleIntervals.has(intervalWithinGroup)) {
               // Get color from the local group structure's function
               const info = groupIntervalsInfo[intervalWithinGroup];
               const color = info ? info.color : { bgColor: 'bg-slate-600', textColor: 'text-white' };
-              
+
               // Get the label by calculating interval from the GLOBAL root
               const intervalFromGlobalRoot = getIntervalFromRoot(noteInfo.name, rootNote);
               let label: string;
@@ -422,9 +454,8 @@ const App: React.FC = () => {
         const [stringIndex, fret] = key.split('-').map(Number);
         if (stringIndex < tuning.strings.length) {
           const noteInfo = getNoteOnFret(tuning.strings[stringIndex], fret);
-          // Fix: Explicitly cast manualNote to prevent unknown type property errors on line 278.
           const manualNote = manualNotes[key] as { color: Color, ring: RingColor };
-          
+
           // Calculate interval from GLOBAL root for the label
           const numericInterval = getIntervalFromRoot(noteInfo.name, rootNote);
           let label: string;
@@ -440,7 +471,7 @@ const App: React.FC = () => {
 
     return notes;
   }, [rootNote, tuning, manualNotes, structureLabelType, allStructures, isAdvancedMode, stringGroups, globalStructure, visibleIntervals, hexatonicPattern]);
-  
+
   const resetManualNotes = useCallback(() => setManualNotes({}), []);
 
   const scaleNotesForKeyboard = useMemo(() => {
@@ -496,7 +527,7 @@ const App: React.FC = () => {
             event.preventDefault();
             setPlayingKeys(prev => {
                 if (prev.has(key)) return prev;
-                
+
                 const midiNote = scaleNotesForKeyboard[keyIndex];
                 const frequency = midiToFrequency(midiNote);
                 playNote(frequency, instrument);
@@ -528,16 +559,15 @@ const App: React.FC = () => {
   }, [isSoundEnabled, scaleNotesForKeyboard, instrument]);
 
   const handleExport = useCallback(() => {
-    // FIX: Safely convert Set to Array using Array.from and handle potential null/undefined for arithmetic operations on line 319.
     const intervalSet = isAdvancedMode ? activeGroup?.visibleIntervals : visibleIntervals;
     const intervalsArray = (intervalSet ? Array.from(intervalSet) : []) as number[];
     const currentIntervals = intervalsArray.sort((a: number, b: number) => a - b).map((i: number) => INTERVAL_NAMES[i]);
-    
+
     // Safety check for tuning
     if (!tuning || !tuning.strings) return;
 
     let currentStructureName = detectedStructureName;
-    
+
     if (!currentStructureName) {
       const activeStructureKey = isAdvancedMode ? activeGroup?.structureKey : globalStructure;
       if (activeStructureKey) {
@@ -566,7 +596,7 @@ const App: React.FC = () => {
         <h1 className="text-4xl md:text-5xl font-bold text-cyan-400 tracking-tight">Interactive Guitar Fretboard</h1>
         <p className="text-gray-400 mt-2 max-w-2xl mx-auto">Visualize chord structures and create your own patterns.</p>
       </header>
-      
+
       <main className="flex flex-col lg:flex-row gap-8 flex-1 min-h-0">
         <Controls
           tuning={tuning}
@@ -590,7 +620,6 @@ const App: React.FC = () => {
           onLoadPattern={loadPattern}
           onDeletePattern={deletePattern}
           customStructures={customStructures}
-          onSaveCustomStructure={saveCustomStructure}
           onDeleteCustomStructure={deleteCustomStructure}
           detectedStructureName={detectedStructureName}
           isAdvancedMode={isAdvancedMode}
@@ -610,6 +639,10 @@ const App: React.FC = () => {
           onExport={handleExport}
           hexatonicPattern={hexatonicPattern}
           setHexatonicPattern={setHexatonicPattern}
+          favourites={favourites}
+          catalogScales={catalogData?.scales || []}
+          nameMap={catalogData?.nameMap || {}}
+          onOpenCatalog={() => setIsCatalogOpen(true)}
         />
         <Fretboard
           tuning={tuning}
@@ -617,6 +650,18 @@ const App: React.FC = () => {
           onNoteClick={handleNoteClick}
         />
       </main>
+
+      {/* Scale Catalog Modal */}
+      {isCatalogOpen && catalogData && (
+        <ScaleCatalog
+          scales={catalogData.scales}
+          nameMap={catalogData.nameMap}
+          favourites={favourites}
+          onToggleFavourite={toggleFavourite}
+          onVisualize={selectCatalogScale}
+          onClose={() => setIsCatalogOpen(false)}
+        />
+      )}
 
        <footer className="text-center mt-12 text-gray-500 text-sm">
         <p>Built with React, TypeScript, and Tailwind CSS. Explore music theory interactively.</p>

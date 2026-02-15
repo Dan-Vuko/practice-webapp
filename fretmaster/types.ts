@@ -46,6 +46,38 @@ export type Instrument = 'sine' | 'square' | 'sawtooth' | 'triangle';
 
 export type HexatonicPatternId = 'default' | 'triad_pair_v_vi' | 'cluster_1_2_3__5_6_7' | 'cluster_2_3_5__6_7_1' | 'cluster_3_5_6__7_1_2';
 
+export interface CatalogScale {
+  n: number;
+  name: string;
+  pcs: number[];
+  iv: number[];
+  card: number;
+  modes: number;
+  prime: boolean;
+  primeNum: number;
+  sym: boolean;
+  modeList: { m: number; n: number; name: string }[];
+  directChildren: number[];
+  directParents: number[];
+  complement: number;
+  inverse: number;
+}
+
+export interface CatalogData {
+  nameMap: Record<string, string>;
+  scales: CatalogScale[];
+}
+
+export interface ScaleFilters {
+  search: string;
+  showPrimeOnly: boolean;
+  showSymmetric: boolean;
+  showChords: boolean;
+  showHexatonic: boolean;
+  showFavourites: boolean;
+  noteCount: number | null;
+}
+
 export interface SavedPattern {
   id: string;
   name: string;
