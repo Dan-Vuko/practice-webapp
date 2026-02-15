@@ -68,25 +68,14 @@ const TETRAD_MAP = new Map(COMMON_TETRADS.map(t => [t.id, t]));
 // Lookup sets for identifying common chords at ALL transpositions
 const COMMON_TRIAD_RINGS = new Set<number>();
 const COMMON_TETRAD_RINGS = new Set<number>();
-// Reverse lookup: ring number -> familiar chord name with root (e.g. "Min7(A)")
-const COMMON_CHORD_NAMES = new Map<number, string>();
-
 for (const t of COMMON_TRIADS) {
   for (let r = 0; r < 12; r++) {
-    const ring = pcsToRing(t.pcs.map(pc => (pc + r) % 12));
-    COMMON_TRIAD_RINGS.add(ring);
-    if (!COMMON_CHORD_NAMES.has(ring)) {
-      COMMON_CHORD_NAMES.set(ring, r === 0 ? t.name : `${t.name}(${ALL_NOTES[r]})`);
-    }
+    COMMON_TRIAD_RINGS.add(pcsToRing(t.pcs.map(pc => (pc + r) % 12)));
   }
 }
 for (const t of COMMON_TETRADS) {
   for (let r = 0; r < 12; r++) {
-    const ring = pcsToRing(t.pcs.map(pc => (pc + r) % 12));
-    COMMON_TETRAD_RINGS.add(ring);
-    if (!COMMON_CHORD_NAMES.has(ring)) {
-      COMMON_CHORD_NAMES.set(ring, r === 0 ? t.name : `${t.name}(${ALL_NOTES[r]})`);
-    }
+    COMMON_TETRAD_RINGS.add(pcsToRing(t.pcs.map(pc => (pc + r) % 12)));
   }
 }
 
@@ -102,25 +91,6 @@ function isBarryHarrisScale(scale: CatalogScale): boolean {
 
 function formatIntervals(pcs: number[]): string {
   return pcs.map(pc => INTERVAL_NAMES[pc % 12]).join(' ');
-}
-
-/** Enumerate all k-element subsets of arr that include arr[0] (the root) */
-function subsetsFromRoot(pcs: number[], k: number): number[][] {
-  if (k < 1 || pcs.length < k) return [];
-  const results: number[][] = [];
-  const rest = pcs.slice(1);
-  // Root is always included, pick k-1 from the rest
-  function combo(start: number, chosen: number[]) {
-    if (chosen.length === k - 1) {
-      results.push([pcs[0], ...chosen]);
-      return;
-    }
-    for (let i = start; i < rest.length; i++) {
-      combo(i + 1, [...chosen, rest[i]]);
-    }
-  }
-  combo(0, []);
-  return results;
 }
 
 /** Compute Ian Ring number from pitch class set */
@@ -753,7 +723,7 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
   biTriadic,
   biTetradic,
 }) => {
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => new Set(['otherTriads', 'otherTetrads']));
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => new Set());
   const toggleSection = useCallback((id: string) => {
     setCollapsedSections(prev => {
       const next = new Set(prev);
@@ -763,39 +733,38 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
     });
   }, []);
 
-  // Compute triads and tetrads from root, split into common vs other (only when expanded)
-  const chordsFromRoot = useMemo(() => {
-    const empty = { commonTriads: [], otherTriads: [], commonTetrads: [], otherTetrads: [] };
-    if (!isExpanded || scale.card < 3) return empty;
+  // Harmonization: for each degree, find common triads and tetrads rooted on that degree
+  type DegreeChord = { name: string; pcs: number[]; ring: number };
+  type DegreeHarmonization = { degree: number; degreeName: string; triads: DegreeChord[]; tetrads: DegreeChord[] };
 
-    type Chord = { pcs: number[]; ring: number; name: string };
-    const commonTriads: Chord[] = [];
-    const otherTriads: Chord[] = [];
-    const commonTetrads: Chord[] = [];
-    const otherTetrads: Chord[] = [];
+  const harmonization = useMemo((): DegreeHarmonization[] => {
+    if (!isExpanded || scale.card < 3) return [];
+    const pcsSet = new Set(scale.pcs);
+    const result: DegreeHarmonization[] = [];
 
-    // Triads from root
-    for (const subset of subsetsFromRoot(scale.pcs, 3)) {
-      const ring = pcsToRing(subset);
-      const name = nameMap[String(ring)] || '';
-      const chord = { pcs: subset, ring, name };
-      if (COMMON_TRIAD_RINGS.has(ring)) commonTriads.push(chord);
-      else otherTriads.push(chord);
-    }
+    for (const degree of scale.pcs) {
+      const triads: DegreeChord[] = [];
+      const tetrads: DegreeChord[] = [];
 
-    // Tetrads from root
-    if (scale.card >= 4) {
-      for (const subset of subsetsFromRoot(scale.pcs, 4)) {
-        const ring = pcsToRing(subset);
-        const name = nameMap[String(ring)] || '';
-        const chord = { pcs: subset, ring, name };
-        if (COMMON_TETRAD_RINGS.has(ring)) commonTetrads.push(chord);
-        else otherTetrads.push(chord);
+      for (const t of COMMON_TRIADS) {
+        const transposed = t.pcs.map(pc => (pc + degree) % 12);
+        if (transposed.every(pc => pcsSet.has(pc))) {
+          triads.push({ name: t.name, pcs: transposed, ring: pcsToRing(transposed) });
+        }
+      }
+      for (const t of COMMON_TETRADS) {
+        const transposed = t.pcs.map(pc => (pc + degree) % 12);
+        if (transposed.every(pc => pcsSet.has(pc))) {
+          tetrads.push({ name: t.name, pcs: transposed, ring: pcsToRing(transposed) });
+        }
+      }
+
+      if (triads.length > 0 || tetrads.length > 0) {
+        result.push({ degree, degreeName: INTERVAL_NAMES[degree], triads, tetrads });
       }
     }
-
-    return { commonTriads, otherTriads, commonTetrads, otherTetrads };
-  }, [isExpanded, scale.pcs, scale.card, nameMap]);
+    return result;
+  }, [isExpanded, scale.pcs, scale.card]);
 
   const miniNotes = useMemo(() => {
     if (!isExpanded) return {};
@@ -890,67 +859,39 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
             {!scale.prime && <span className="text-xs text-gray-500">Prime form: {nameMap[String(scale.primeNum)] || `#${scale.primeNum}`} (#{scale.primeNum})</span>}
           </div>
 
-          {/* Common Triads */}
-          {chordsFromRoot.commonTriads.length > 0 && (
-            <DetailSection id="commonTriads" label={<>Common Triads ({chordsFromRoot.commonTriads.length})</>} collapsed={collapsedSections} onToggle={toggleSection}>
-              {chordsFromRoot.commonTriads.map(chord => (
-                <button
-                  key={chord.ring}
-                  onClick={() => onNavigate(chord.ring)}
-                  className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
-                  title={chord.name || `#${chord.ring}`}
-                >
-                  {COMMON_CHORD_NAMES.get(chord.ring) || chord.name || `#${chord.ring}`} <span className="text-gray-500">{chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}</span>
-                </button>
-              ))}
-            </DetailSection>
-          )}
-
-          {/* Common Tetrads */}
-          {chordsFromRoot.commonTetrads.length > 0 && (
-            <DetailSection id="commonTetrads" label={<>Common Tetrads ({chordsFromRoot.commonTetrads.length})</>} collapsed={collapsedSections} onToggle={toggleSection}>
-              {chordsFromRoot.commonTetrads.map(chord => (
-                <button
-                  key={chord.ring}
-                  onClick={() => onNavigate(chord.ring)}
-                  className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
-                  title={chord.name || `#${chord.ring}`}
-                >
-                  {COMMON_CHORD_NAMES.get(chord.ring) || chord.name || `#${chord.ring}`} <span className="text-gray-500">{chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}</span>
-                </button>
-              ))}
-            </DetailSection>
-          )}
-
-          {/* Other 3-Note Structures */}
-          {chordsFromRoot.otherTriads.length > 0 && (
-            <DetailSection id="otherTriads" label={<>Other 3-Note Structures ({chordsFromRoot.otherTriads.length})</>} collapsed={collapsedSections} onToggle={toggleSection}>
-              {chordsFromRoot.otherTriads.map(chord => (
-                <button
-                  key={chord.ring}
-                  onClick={() => onNavigate(chord.ring)}
-                  className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
-                  title={chord.name || `#${chord.ring}`}
-                >
-                  {chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}
-                </button>
-              ))}
-            </DetailSection>
-          )}
-
-          {/* Other 4-Note Structures */}
-          {chordsFromRoot.otherTetrads.length > 0 && (
-            <DetailSection id="otherTetrads" label={<>Other 4-Note Structures ({chordsFromRoot.otherTetrads.length})</>} collapsed={collapsedSections} onToggle={toggleSection}>
-              {chordsFromRoot.otherTetrads.map(chord => (
-                <button
-                  key={chord.ring}
-                  onClick={() => onNavigate(chord.ring)}
-                  className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
-                  title={chord.name || `#${chord.ring}`}
-                >
-                  {chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}
-                </button>
-              ))}
+          {/* Harmonization — triads & tetrads from each degree */}
+          {harmonization.length > 0 && (
+            <DetailSection id="harmonization" label={<>Harmonization ({harmonization.length} degrees)</>} collapsed={collapsedSections} onToggle={toggleSection}>
+              <div className="w-full space-y-1.5">
+                {harmonization.map(h => (
+                  <div key={h.degree} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                    <span className="text-cyan-400 font-mono text-xs w-6 flex-shrink-0">{h.degreeName}</span>
+                    {h.triads.map(c => (
+                      <button
+                        key={`t3-${c.ring}`}
+                        onClick={() => onNavigate(c.ring)}
+                        className="px-1.5 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
+                        title={c.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                    {h.tetrads.map(c => (
+                      <button
+                        key={`t4-${c.ring}`}
+                        onClick={() => onNavigate(c.ring)}
+                        className="px-1.5 py-0.5 rounded text-xs bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-cyan-300 transition-colors"
+                        title={c.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                    {h.triads.length === 0 && h.tetrads.length === 0 && (
+                      <span className="text-xs text-gray-600">—</span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </DetailSection>
           )}
 
