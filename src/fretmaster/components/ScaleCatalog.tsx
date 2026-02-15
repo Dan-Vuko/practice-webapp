@@ -199,43 +199,54 @@ type ChordDecomposition = { t1: string; r1: number; pcs1: number[]; t2: string; 
 type TriadDecomposition = ChordDecomposition;
 type TetradDecomposition = ChordDecomposition;
 
-// Build lookup: sorted pcs key -> { id, root }
-const TRIAD_LOOKUP = new Map<string, { id: string; root: number }>();
+// Build lookup: sorted pcs key -> all matching { id, root } entries
+const TRIAD_LOOKUP = new Map<string, { id: string; root: number }[]>();
 for (const triad of COMMON_TRIADS) {
   for (let r = 0; r < 12; r++) {
     const transposed = triad.pcs.map(pc => (pc + r) % 12).sort((a, b) => a - b);
     const key = transposed.join(',');
-    if (!TRIAD_LOOKUP.has(key)) TRIAD_LOOKUP.set(key, { id: triad.id, root: r });
+    if (!TRIAD_LOOKUP.has(key)) TRIAD_LOOKUP.set(key, []);
+    TRIAD_LOOKUP.get(key)!.push({ id: triad.id, root: r });
   }
 }
 
-const TETRAD_LOOKUP = new Map<string, { id: string; root: number }>();
+const TETRAD_LOOKUP = new Map<string, { id: string; root: number }[]>();
 for (const tetrad of COMMON_TETRADS) {
   for (let r = 0; r < 12; r++) {
     const transposed = tetrad.pcs.map(pc => (pc + r) % 12).sort((a, b) => a - b);
     const key = transposed.join(',');
-    if (!TETRAD_LOOKUP.has(key)) TETRAD_LOOKUP.set(key, { id: tetrad.id, root: r });
+    if (!TETRAD_LOOKUP.has(key)) TETRAD_LOOKUP.set(key, []);
+    TETRAD_LOOKUP.get(key)!.push({ id: tetrad.id, root: r });
   }
+}
+
+// Pick the match whose root equals preferredRoot, or fall back to first match
+function bestMatch(matches: { id: string; root: number }[], preferredRoot: number) {
+  return matches.find(m => m.root === preferredRoot) || matches[0];
 }
 
 function findBiTriadicDecomposition(pcs: number[]): TriadDecomposition | null {
   if (pcs.length !== 6) return null;
   const odd = [pcs[0], pcs[2], pcs[4]].sort((a, b) => a - b);
   const even = [pcs[1], pcs[3], pcs[5]].sort((a, b) => a - b);
-  const m1 = TRIAD_LOOKUP.get(odd.join(','));
-  const m2 = TRIAD_LOOKUP.get(even.join(','));
-  if (m1 && m2) return { t1: m1.id, r1: m1.root, pcs1: odd, t2: m2.id, r2: m2.root, pcs2: even };
-  return null;
+  const matches1 = TRIAD_LOOKUP.get(odd.join(','));
+  const matches2 = TRIAD_LOOKUP.get(even.join(','));
+  if (!matches1 || !matches2) return null;
+  const m1 = bestMatch(matches1, pcs[0]);
+  const m2 = bestMatch(matches2, pcs[1]);
+  return { t1: m1.id, r1: m1.root, pcs1: odd, t2: m2.id, r2: m2.root, pcs2: even };
 }
 
 function findBiTetradicDecomposition(pcs: number[]): TetradDecomposition | null {
   if (pcs.length !== 8) return null;
   const odd = [pcs[0], pcs[2], pcs[4], pcs[6]].sort((a, b) => a - b);
   const even = [pcs[1], pcs[3], pcs[5], pcs[7]].sort((a, b) => a - b);
-  const m1 = TETRAD_LOOKUP.get(odd.join(','));
-  const m2 = TETRAD_LOOKUP.get(even.join(','));
-  if (m1 && m2) return { t1: m1.id, r1: m1.root, pcs1: odd, t2: m2.id, r2: m2.root, pcs2: even };
-  return null;
+  const matches1 = TETRAD_LOOKUP.get(odd.join(','));
+  const matches2 = TETRAD_LOOKUP.get(even.join(','));
+  if (!matches1 || !matches2) return null;
+  const m1 = bestMatch(matches1, pcs[0]);
+  const m2 = bestMatch(matches2, pcs[1]);
+  return { t1: m1.id, r1: m1.root, pcs1: odd, t2: m2.id, r2: m2.root, pcs2: even };
 }
 
 function triadName(id: string): string {
