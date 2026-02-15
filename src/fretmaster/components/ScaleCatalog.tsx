@@ -28,17 +28,11 @@ const DEFAULT_FILTERS: ScaleFilters = {
   noteCount: null,
 };
 
-// Three diminished 7th chords
-const DIM7_CHORDS = [
-  [0, 3, 6, 9],
-  [1, 4, 7, 10],
-  [2, 5, 8, 11],
-];
+// The 4 core Barry Harris scales only
+const BARRY_HARRIS_SCALES = new Set([2997, 2989, 3509, 3445]);
 
 function isBarryHarrisScale(scale: CatalogScale): boolean {
-  if (scale.card !== 8) return false;
-  const pcsSet = new Set(scale.pcs);
-  return DIM7_CHORDS.some(dim => dim.every(pc => pcsSet.has(pc)));
+  return BARRY_HARRIS_SCALES.has(scale.n);
 }
 
 function formatIntervals(pcs: number[]): string {
