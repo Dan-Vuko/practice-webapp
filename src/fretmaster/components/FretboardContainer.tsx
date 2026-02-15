@@ -17,6 +17,7 @@ interface FretboardContainerProps {
   customStructures: Record<string, Structure>;
   catalogStructures: Record<string, Structure>;
   onTitleClick?: () => void;
+  onToggleDiff?: () => void;
 }
 
 const FretboardContainer: React.FC<FretboardContainerProps> = ({
@@ -32,6 +33,7 @@ const FretboardContainer: React.FC<FretboardContainerProps> = ({
   customStructures,
   catalogStructures,
   onTitleClick,
+  onToggleDiff,
 }) => {
   // Get the structure name
   const allStructures = { ...STRUCTURES, ...customStructures, ...catalogStructures };
@@ -65,19 +67,37 @@ const FretboardContainer: React.FC<FretboardContainerProps> = ({
           {displayTitle}
         </h3>
 
-        {canRemove && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove();
-            }}
-            className="p-1 rounded-lg bg-red-500/10 hover:bg-red-500/20
-                       text-red-400 hover:text-red-300 transition-all"
-            title="Remove fretboard"
-          >
-            <XIcon />
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          {canRemove && onToggleDiff && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleDiff();
+              }}
+              className={`px-2 py-0.5 rounded-lg text-xs font-bold transition-all ${
+                fretboard.showDiff
+                  ? 'bg-purple-500/30 text-purple-300 ring-1 ring-purple-500'
+                  : 'bg-gray-700/50 text-gray-500 hover:text-gray-300'
+              }`}
+              title="Toggle diff comparison"
+            >
+              Diff
+            </button>
+          )}
+          {canRemove && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove();
+              }}
+              className="p-1 rounded-lg bg-red-500/10 hover:bg-red-500/20
+                         text-red-400 hover:text-red-300 transition-all"
+              title="Remove fretboard"
+            >
+              <XIcon />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Fretboard */}

@@ -66,9 +66,14 @@ const createDefaultFretboard = (id: string): FretboardInstance => ({
   isAdvancedMode: false,
   stringGroups: [],
   activeGroupId: null,
+  showDiff: false,
 });
 
-const App: React.FC = () => {
+interface AppProps {
+  initialCatalogScale?: number | null;
+}
+
+const App: React.FC<AppProps> = ({ initialCatalogScale: initialCatalogScaleProp }) => {
   // Multi-fretboard state
   const [fretboards, setFretboards] = useState<FretboardInstance[]>([createDefaultFretboard('1')]);
   const [activeFretboardId, setActiveFretboardId] = useState<string>('1');
@@ -84,7 +89,7 @@ const App: React.FC = () => {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [catalogData, setCatalogData] = useState<CatalogData | null>(null);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
-  const [initialCatalogScale, setInitialCatalogScale] = useState<number | null>(null);
+  const [initialCatalogScale, setInitialCatalogScale] = useState<number | null>(initialCatalogScaleProp ?? null);
   const [catalogFavourites, setCatalogFavourites] = useState<number[]>([]);
   const [recentlyViewed, setRecentlyViewed] = useState<number[]>([]);
   const [customPresets, setCustomPresets] = useState<CustomPreset[]>([]);
@@ -154,6 +159,15 @@ const App: React.FC = () => {
       if (storedRecent) setRecentlyViewed(JSON.parse(storedRecent));
     } catch (e) { console.error(e); }
   }, []);
+
+  // Feature 7: Auto-open catalog when URL deep link is present
+  useEffect(() => {
+    if (initialCatalogScaleProp && catalogData) {
+      setInitialCatalogScale(initialCatalogScaleProp);
+      setIsCatalogOpen(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalogData]);
 
   const toggleFavorite = useCallback(async (structureKey: string) => {
     try {
@@ -379,6 +393,21 @@ const App: React.FC = () => {
     });
   }, [isSoundEnabled, tuning, activeFretboard, activeGroup, instrument]);
 
+  // Feature 8: Compute intersection of intervals for diff-enabled fretboards
+  const diffIntersection = useMemo((): Set<number> | null => {
+    const diffFbs = fretboards.filter(fb => fb.showDiff);
+    if (diffFbs.length < 2) return null;
+    let intersection = new Set(diffFbs[0].visibleIntervals);
+    for (let i = 1; i < diffFbs.length; i++) {
+      const next = new Set<number>();
+      for (const v of intersection) {
+        if (diffFbs[i].visibleIntervals.has(v)) next.add(v);
+      }
+      intersection = next;
+    }
+    return intersection;
+  }, [fretboards]);
+
   const calculateHighlightedNotes = useCallback((fretboard: FretboardInstance): Record<string, HighlightedNote> => {
     const notes: Record<string, HighlightedNote> = {};
     if (fretboard.isAdvancedMode) {
@@ -460,8 +489,19 @@ const App: React.FC = () => {
         notes[key] = { label, ...noteData.color, ringClassName: noteData.ring.ringClassName };
       }
     });
+    // Feature 8: Mark shared notes for diff mode
+    if (fretboard.showDiff && diffIntersection) {
+      for (const [key, note] of Object.entries(notes)) {
+        const [sIdx, fret] = key.split('-').map(Number);
+        const noteInfo = getNoteOnFret(tuning.strings[sIdx], fret);
+        const interval = getIntervalFromRoot(noteInfo.name, fretboard.rootNote);
+        if (diffIntersection.has(interval)) {
+          note.isDiffShared = true;
+        }
+      }
+    }
     return notes;
-  }, [tuning, allStructures]);
+  }, [tuning, allStructures, diffIntersection]);
 
   const toggleCatalogFavourite = useCallback((scaleNumber: number) => {
     setCatalogFavourites(prev => {
@@ -483,6 +523,7 @@ const App: React.FC = () => {
     });
     updateActiveFretboard({ globalStructure: newId, visibleIntervals: new Set(scale.pcs) });
     setIsCatalogOpen(false);
+    window.history.replaceState(null, '', `#fretmaster/scale/${scale.n}`);
   }, [updateActiveFretboard]);
 
   const openCatalogForFretboard = useCallback((fb: FretboardInstance) => {
@@ -568,6 +609,11 @@ const App: React.FC = () => {
               customStructures={customStructures}
               catalogStructures={catalogStructures}
               onTitleClick={() => openCatalogForFretboard(fb)}
+              onToggleDiff={() => {
+                setFretboards(prev => prev.map(f =>
+                  f.id === fb.id ? { ...f, showDiff: !f.showDiff } : f
+                ));
+              }}
               onNoteClick={(sIdx, fret) => {
                 const noteInfo = getNoteOnFret(tuning.strings[sIdx], fret);
                 if (isSoundEnabled && noteInfo.midi) playNote(midiToFrequency(noteInfo.midi), instrument);
@@ -612,7 +658,7 @@ const App: React.FC = () => {
           favourites={catalogFavourites}
           onToggleFavourite={toggleCatalogFavourite}
           onVisualize={visualizeCatalogScale}
-          onClose={() => { setIsCatalogOpen(false); setInitialCatalogScale(null); }}
+          onClose={() => { setIsCatalogOpen(false); setInitialCatalogScale(null); window.history.replaceState(null, '', '#fretmaster'); }}
           initialScaleNumber={initialCatalogScale}
         />
       )}

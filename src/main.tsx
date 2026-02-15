@@ -13,11 +13,17 @@ function Root() {
   const { user, loading } = useAuth()
   const getInitialApp = (): 'speedbuilder' | 'fretmaster' => {
     const hash = window.location.hash.replace('#', '')
-    if (hash === 'fretmaster') return 'fretmaster'
+    if (hash.startsWith('fretmaster')) return 'fretmaster'
     if (hash === 'speedbuilder') return 'speedbuilder'
     return 'speedbuilder'
   }
+  const getInitialCatalogScale = (): number | null => {
+    const hash = window.location.hash.replace('#', '')
+    const match = hash.match(/^fretmaster\/scale\/(\d+)$/)
+    return match ? Number(match[1]) : null
+  }
   const [currentApp, setCurrentApp] = useState<'speedbuilder' | 'fretmaster'>(getInitialApp)
+  const [initialCatalogScale] = useState<number | null>(getInitialCatalogScale)
 
   const handleSwitchApp = (app: 'speedbuilder' | 'fretmaster') => {
     setCurrentApp(app)
@@ -43,7 +49,7 @@ function Root() {
         <App />
       </div>
       <div style={{ display: currentApp === 'fretmaster' ? 'block' : 'none' }}>
-        <FretMaster />
+        <FretMaster initialCatalogScale={initialCatalogScale} />
       </div>
     </div>
   )

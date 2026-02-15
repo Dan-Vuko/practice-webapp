@@ -21,6 +21,7 @@ export interface HighlightedNote {
   textColor: string;
   ringClassName?: string;
   dotSize?: 'small';
+  isDiffShared?: boolean;
 }
 
 export type StructureLabelType = 'interval' | 'noteName' | 'sargam' | 'degree';
@@ -77,6 +78,7 @@ export interface FretboardInstance {
   isAdvancedMode: boolean;
   stringGroups: StringGroup[];
   activeGroupId: string | null;
+  showDiff: boolean;
 }
 
 export interface CatalogScale {
@@ -116,7 +118,10 @@ export interface ScaleFilters {
   showHexatonic: boolean;
   showBarryHarris: boolean;
   showFavourites: boolean;
+  showBiTriadic: boolean;
+  showBiTetradic: boolean;
   noteCount: number | null;
   containsTriad: string | null;
   containsTetrad: string | null;
+  intervalPattern: string;
 }
