@@ -69,6 +69,11 @@ const TETRAD_MAP = new Map(COMMON_TETRADS.map(t => [t.id, t]));
 const COMMON_TRIAD_RINGS = new Set(COMMON_TRIADS.map(t => pcsToRing(t.pcs)));
 const COMMON_TETRAD_RINGS = new Set(COMMON_TETRADS.map(t => pcsToRing(t.pcs)));
 
+// Reverse lookup: ring number -> familiar chord name (e.g. 1161 -> "Min7")
+const COMMON_CHORD_NAMES = new Map<number, string>();
+for (const t of COMMON_TRIADS) COMMON_CHORD_NAMES.set(pcsToRing(t.pcs), t.name);
+for (const t of COMMON_TETRADS) COMMON_CHORD_NAMES.set(pcsToRing(t.pcs), t.name);
+
 // All 10 Barry Harris chord scales
 const BARRY_HARRIS_SCALES = new Set([
   2997, 2989, 3509, 3445,           // Core 4 (Maj6, Min6, Dom7, Dom7b5)
@@ -879,7 +884,7 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
                   className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
                   title={`[${chord.pcs.map(pc => INTERVAL_NAMES[pc]).join(', ')}]`}
                 >
-                  {chord.name || `#${chord.ring}`} <span className="text-gray-500">{chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}</span>
+                  {COMMON_CHORD_NAMES.get(chord.ring) || chord.name || `#${chord.ring}`} <span className="text-gray-500">{chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}</span>
                 </button>
               ))}
             </DetailSection>
@@ -895,7 +900,7 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
                   className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
                   title={`[${chord.pcs.map(pc => INTERVAL_NAMES[pc]).join(', ')}]`}
                 >
-                  {chord.name || `#${chord.ring}`} <span className="text-gray-500">{chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}</span>
+                  {COMMON_CHORD_NAMES.get(chord.ring) || chord.name || `#${chord.ring}`} <span className="text-gray-500">{chord.pcs.map(pc => INTERVAL_NAMES[pc]).join('-')}</span>
                 </button>
               ))}
             </DetailSection>
