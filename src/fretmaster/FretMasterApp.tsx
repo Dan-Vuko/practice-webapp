@@ -71,7 +71,7 @@ const App: React.FC = () => {
 
     // Load catalog favourites from localStorage
     // Auto-favourite the 4 core Barry Harris scales on first load
-    const BH_DEFAULTS = [2997, 2989, 3445, 3507]; // Maj6Dim, Min6Dim, Dom7b5Dim, PhrygDomBebop
+    const BH_DEFAULTS = [2997, 2989, 3509, 3445, 3507]; // Maj6Dim, Min6Dim, Dom7Dim, Dom7b5Dim, PhrygDomBebop
     try {
       const stored = localStorage.getItem('fretmaster_catalog_favourites');
       if (stored) {
