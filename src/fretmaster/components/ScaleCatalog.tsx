@@ -1,13 +1,14 @@
 
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import type { CatalogScale, ScaleFilters } from '../types';
-import { INTERVAL_NAMES } from '../constants';
+import type { CatalogScale, ScaleFilters, HighlightedNote } from '../types';
+import { INTERVAL_NAMES, INTERVAL_COLORS, TUNINGS, DEFAULT_THEME, FRET_COUNT } from '../constants';
 import { XIcon } from './icons/XIcon';
 import { StarIcon } from './icons/StarIcon';
 import { SearchIcon } from './icons/SearchIcon';
 import { ChevronIcon } from './icons/ChevronIcon';
 import ScaleLookup from './ScaleLookup';
-import { midiToFrequency } from '../utils/music';
+import Fretboard from './Fretboard';
+import { getNoteOnFret, getIntervalFromRoot, midiToFrequency } from '../utils/music';
 import { playNote } from '../utils/audio';
 
 interface ScaleCatalogProps {
@@ -94,6 +95,29 @@ function subsetsFromRoot(pcs: number[], k: number): number[][] {
 /** Compute Ian Ring number from pitch class set */
 function pcsToRing(pcs: number[]): number {
   return pcs.reduce((sum, pc) => sum + (1 << pc), 0);
+}
+
+const MINI_ROOT = 'D';
+const MINI_TUNING = TUNINGS.daead;
+
+function computeMiniNotes(pcs: number[]): Record<string, HighlightedNote> {
+  const notes: Record<string, HighlightedNote> = {};
+  const pcsSet = new Set(pcs);
+  MINI_TUNING.strings.forEach((openNote, sIdx) => {
+    for (let fret = 0; fret <= FRET_COUNT; fret++) {
+      const info = getNoteOnFret(openNote, fret);
+      const interval = getIntervalFromRoot(info.name, MINI_ROOT);
+      if (pcsSet.has(interval)) {
+        const color = INTERVAL_COLORS[interval % 12];
+        notes[`${sIdx}-${fret}`] = {
+          label: INTERVAL_NAMES[interval],
+          bgColor: color.bgColor,
+          textColor: color.textColor,
+        };
+      }
+    }
+  });
+  return notes;
 }
 
 /** Play a scale ascending from middle C, then the octave */
@@ -477,6 +501,11 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
     return { triads, tetrads };
   }, [isExpanded, scale.pcs, scale.card, nameMap]);
 
+  const miniNotes = useMemo(() => {
+    if (!isExpanded) return {};
+    return computeMiniNotes(scale.pcs);
+  }, [isExpanded, scale.pcs]);
+
   return (
     <div ref={expandedRef} className="bg-gray-900/50 rounded-md">
       {/* Row header */}
@@ -646,6 +675,18 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Mini fretboard preview */}
+          <div className="overflow-hidden rounded-lg border border-gray-700/50" style={{ height: '80px' }}>
+            <div style={{ transform: 'scale(0.35)', transformOrigin: 'top left', width: '286%', pointerEvents: 'none' }}>
+              <Fretboard
+                tuning={MINI_TUNING}
+                theme={DEFAULT_THEME}
+                highlightedNotes={miniNotes}
+                onNoteClick={() => {}}
+              />
+            </div>
           </div>
 
           {/* Visualize button */}
