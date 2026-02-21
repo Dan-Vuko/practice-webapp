@@ -351,27 +351,36 @@ function longestConsecutiveSemitones(iv: number[]): number {
   return Math.min(maxRun, iv.length);
 }
 
-/** Non-BH bi-tetradic scales display as "Octotonic" */
-function getOctatonicLabel(
+/** Vukodian naming for non-BH bi-tetradic scales; #1755 is just "Octotonic" */
+function getBiTetradicLabel(
   scale: CatalogScale,
   decomps: TetradDecomposition[],
 ): string | null {
   if (decomps.length === 0) return null;
   if (BARRY_HARRIS_SCALES.has(scale.n)) return null;
+  if (scale.n === 1755) return `Octotonic (${scale.name || 'Diminished'}) #1755`;
+  // Find "prime" decomposition: first tetrad root matches pcs[0]
+  const prime = decomps.find(d => d.r1 === scale.pcs[0]) || decomps[0];
+  const t1 = tetradName(prime.t1);
+  const t2 = tetradName(prime.t2);
   const catalogName = scale.name;
   const suffix = catalogName ? ` (${catalogName})` : '';
-  return `Octotonic${suffix} #${scale.n}`;
+  return `Vukodian ${t1} + ${t2}${suffix} #${scale.n}`;
 }
 
-/** Tri-triadic 9-note scales display as "Nonatonic" */
-function getNonatonicLabel(
+/** Vukodian naming for tri-triadic 9-note scales */
+function getTriTriadicLabel(
   scale: CatalogScale,
   decomps: TriTriadicDecomposition[],
 ): string | null {
   if (decomps.length === 0) return null;
+  const prime = decomps.find(d => d.r1 === scale.pcs[0]) || decomps[0];
+  const t1 = triadName(prime.t1);
+  const t2 = triadName(prime.t2);
+  const t3 = triadName(prime.t3);
   const catalogName = scale.name;
   const suffix = catalogName ? ` (${catalogName})` : '';
-  return `Nonatonic${suffix} #${scale.n}`;
+  return `Vukodian ${t1} + ${t2} + ${t3}${suffix} #${scale.n}`;
 }
 
 /** Play a tri-chord decomposition: three arpeggios in succession */
@@ -482,9 +491,12 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
       if (filters.search) {
         const q = filters.search.toLowerCase();
         const nameMatch = scale.name.toLowerCase().includes(q);
-        const octatonicMatch = q.includes('octotonic') && biTetradicMap.has(scale.n) && !BARRY_HARRIS_SCALES.has(scale.n);
-        const nonatonicMatch = q.includes('nonatonic') && triTriadicMap.has(scale.n);
-        if (!nameMatch && !octatonicMatch && !nonatonicMatch) return false;
+        const vukodianMatch = q.includes('vukodian') && (
+          (biTetradicMap.has(scale.n) && !BARRY_HARRIS_SCALES.has(scale.n) && scale.n !== 1755)
+          || triTriadicMap.has(scale.n)
+        );
+        const octatonicMatch = q.includes('octotonic') && scale.n === 1755;
+        if (!nameMatch && !vukodianMatch && !octatonicMatch) return false;
       }
       if (filters.showPrimeOnly && !scale.prime) return false;
       if (filters.showSymmetric && !scale.sym) return false;
@@ -1009,8 +1021,8 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
         </button>
         <div className="flex-1 min-w-0">
           {(() => {
-            const label = (biTetradics && getOctatonicLabel(scale, biTetradics))
-              || (triTriadics && getNonatonicLabel(scale, triTriadics));
+            const label = (biTetradics && getBiTetradicLabel(scale, biTetradics))
+              || (triTriadics && getTriTriadicLabel(scale, triTriadics));
             return <>
               <span className="font-medium text-white">
                 {label || scale.name || `Scale #${scale.n}`}
