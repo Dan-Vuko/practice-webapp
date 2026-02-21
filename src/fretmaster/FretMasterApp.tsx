@@ -10,38 +10,141 @@ import { playNote } from './utils/audio';
 import { exportFretboardToPng } from './utils/export';
 import { db } from '../database';
 
-// BH coloring helper: detect dim7 chord in 8-note scales and apply blue/red
-const DIM7_CHORDS_BH = [[0,3,6,9], [1,4,7,10], [2,5,8,11]];
-const BH_BLUE: Color = { bgColor: 'bg-blue-500', textColor: 'text-white' };
-const BH_RED: Color = { bgColor: 'bg-red-500', textColor: 'text-white' };
-const BH_ROOT_BLUE: Color = { bgColor: 'bg-blue-500', textColor: 'text-white', ringClassName: 'ring-yellow-400' };
-const BH_ROOT_RED: Color = { bgColor: 'bg-red-500', textColor: 'text-white', ringClassName: 'ring-yellow-400' };
+// Decomposition coloring: blue for group 1, red for group 2, green for group 3
+const DECOMP_BLUE: Color = { bgColor: 'bg-blue-500', textColor: 'text-white' };
+const DECOMP_RED: Color = { bgColor: 'bg-red-500', textColor: 'text-white' };
+const DECOMP_GREEN: Color = { bgColor: 'bg-green-500', textColor: 'text-white' };
+const DECOMP_ROOT_BLUE: Color = { bgColor: 'bg-blue-500', textColor: 'text-white', ringClassName: 'ring-yellow-400' };
+const DECOMP_ROOT_RED: Color = { bgColor: 'bg-red-500', textColor: 'text-white', ringClassName: 'ring-yellow-400' };
+const DECOMP_ROOT_GREEN: Color = { bgColor: 'bg-green-500', textColor: 'text-white', ringClassName: 'ring-yellow-400' };
+
+// Common chord shapes for decomposition detection
+const COMMON_TRIAD_PCS = [
+  [0,4,7], [0,3,7], [0,3,6], [0,4,8], [0,5,7], [0,2,7], // Maj,Min,Dim,Aug,Sus4,Sus2
+];
+const COMMON_TETRAD_PCS = [
+  [0,4,7,11], [0,4,7,10], [0,3,7,10], [0,3,7,11], [0,4,7,9], [0,3,7,9],
+  [0,3,6,10], [0,3,6,9], [0,4,6,10], [0,4,8,10], [0,4,8,11], [0,5,7,10],
+];
+
+// Build chord lookup: sorted pcs key -> true
+const TRIAD_KEYS = new Set<string>();
+for (const pcs of COMMON_TRIAD_PCS) {
+  for (let r = 0; r < 12; r++) {
+    TRIAD_KEYS.add(pcs.map(pc => (pc + r) % 12).sort((a, b) => a - b).join(','));
+  }
+}
+const TETRAD_KEYS = new Set<string>();
+for (const pcs of COMMON_TETRAD_PCS) {
+  for (let r = 0; r < 12; r++) {
+    TETRAD_KEYS.add(pcs.map(pc => (pc + r) % 12).sort((a, b) => a - b).join(','));
+  }
+}
+
+/** Find a bi-triadic split: any 3 notes that form a triad, remainder also a triad */
+function findBiTriadicSplit(pcs: number[]): [Set<number>, Set<number>] | null {
+  if (pcs.length !== 6) return null;
+  const pcsSet = new Set(pcs);
+  for (const shape of COMMON_TRIAD_PCS) {
+    for (let r = 0; r < 12; r++) {
+      const tr = shape.map(pc => (pc + r) % 12);
+      if (!tr.every(pc => pcsSet.has(pc))) continue;
+      const trSet = new Set(tr);
+      const rem = pcs.filter(pc => !trSet.has(pc)).sort((a, b) => a - b);
+      if (TRIAD_KEYS.has(rem.join(','))) return [trSet, new Set(rem)];
+    }
+  }
+  return null;
+}
+
+/** Find a bi-tetradic split: any 4 notes that form a tetrad, remainder also a tetrad */
+function findBiTetradicSplit(pcs: number[]): [Set<number>, Set<number>] | null {
+  if (pcs.length !== 8) return null;
+  const pcsSet = new Set(pcs);
+  for (const shape of COMMON_TETRAD_PCS) {
+    for (let r = 0; r < 12; r++) {
+      const tr = shape.map(pc => (pc + r) % 12);
+      if (!tr.every(pc => pcsSet.has(pc))) continue;
+      const trSet = new Set(tr);
+      const rem = pcs.filter(pc => !trSet.has(pc)).sort((a, b) => a - b);
+      if (TETRAD_KEYS.has(rem.join(','))) return [trSet, new Set(rem)];
+    }
+  }
+  return null;
+}
+
+/** Find a tri-triadic split: 9 notes = 3 triads */
+function findTriTriadicSplit(pcs: number[]): [Set<number>, Set<number>, Set<number>] | null {
+  if (pcs.length !== 9) return null;
+  const pcsSet = new Set(pcs);
+  for (const shape of COMMON_TRIAD_PCS) {
+    for (let r = 0; r < 12; r++) {
+      const tr = shape.map(pc => (pc + r) % 12);
+      if (!tr.every(pc => pcsSet.has(pc))) continue;
+      const trSet = new Set(tr);
+      const rem = pcs.filter(pc => !trSet.has(pc));
+      const biSplit = findBiTriadicSplit(rem);
+      if (biSplit) return [trSet, biSplit[0], biSplit[1]];
+    }
+  }
+  return null;
+}
 
 function buildCatalogStructure(scale: CatalogScale): Structure {
-  let isBH = false;
-  let dim7Set: Set<number> | null = null;
-  if (scale.card === 8) {
-    const pcsSet = new Set(scale.pcs);
-    for (const dim7 of DIM7_CHORDS_BH) {
-      if (dim7.every(pc => pcsSet.has(pc))) {
-        isBH = true;
-        dim7Set = new Set(dim7);
-        break;
-      }
+  // Try tri-triadic (9-note) first
+  if (scale.card === 9) {
+    const split = findTriTriadicSplit(scale.pcs);
+    if (split) {
+      const [g1, g2] = split;
+      return {
+        name: scale.name || `Scale #${scale.n}`,
+        intervals: scale.pcs.map(pc => ({ interval: pc, name: INTERVAL_NAMES[pc % 12] })),
+        colors: scale.pcs.map((pc, i) => {
+          if (g1.has(pc)) return i === 0 ? DECOMP_ROOT_BLUE : DECOMP_BLUE;
+          if (g2.has(pc)) return i === 0 ? DECOMP_ROOT_RED : DECOMP_RED;
+          return i === 0 ? DECOMP_ROOT_GREEN : DECOMP_GREEN;
+        }),
+      };
     }
   }
 
+  // Try bi-tetradic (8-note)
+  if (scale.card === 8) {
+    const split = findBiTetradicSplit(scale.pcs);
+    if (split) {
+      const g1 = split[0];
+      return {
+        name: scale.name || `Scale #${scale.n}`,
+        intervals: scale.pcs.map(pc => ({ interval: pc, name: INTERVAL_NAMES[pc % 12] })),
+        colors: scale.pcs.map((pc, i) => {
+          if (g1.has(pc)) return i === 0 ? DECOMP_ROOT_BLUE : DECOMP_BLUE;
+          return i === 0 ? DECOMP_ROOT_RED : DECOMP_RED;
+        }),
+      };
+    }
+  }
+
+  // Try bi-triadic (6-note)
+  if (scale.card === 6) {
+    const split = findBiTriadicSplit(scale.pcs);
+    if (split) {
+      const g1 = split[0];
+      return {
+        name: scale.name || `Scale #${scale.n}`,
+        intervals: scale.pcs.map(pc => ({ interval: pc, name: INTERVAL_NAMES[pc % 12] })),
+        colors: scale.pcs.map((pc, i) => {
+          if (g1.has(pc)) return i === 0 ? DECOMP_ROOT_BLUE : DECOMP_BLUE;
+          return i === 0 ? DECOMP_ROOT_RED : DECOMP_RED;
+        }),
+      };
+    }
+  }
+
+  // Default: interval-based coloring
   return {
     name: scale.name || `Scale #${scale.n}`,
     intervals: scale.pcs.map(pc => ({ interval: pc, name: INTERVAL_NAMES[pc % 12] })),
-    colors: scale.pcs.map((pc, i) => {
-      if (isBH && dim7Set) {
-        const isDim = dim7Set.has(pc);
-        if (i === 0) return isDim ? BH_ROOT_RED : BH_ROOT_BLUE;
-        return isDim ? BH_RED : BH_BLUE;
-      }
-      return INTERVAL_COLORS[pc % 12];
-    }),
+    colors: scale.pcs.map(pc => INTERVAL_COLORS[pc % 12]),
   };
 }
 
