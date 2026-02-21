@@ -363,6 +363,17 @@ function getOctatonicLabel(
   return `Octotonic${suffix} #${scale.n}`;
 }
 
+/** Tri-triadic 9-note scales display as "Nonatonic" */
+function getNonatonicLabel(
+  scale: CatalogScale,
+  decomps: TriTriadicDecomposition[],
+): string | null {
+  if (decomps.length === 0) return null;
+  const catalogName = scale.name;
+  const suffix = catalogName ? ` (${catalogName})` : '';
+  return `Nonatonic${suffix} #${scale.n}`;
+}
+
 /** Play a tri-chord decomposition: three arpeggios in succession */
 function playTriDecomposition(d: TriTriadicDecomposition) {
   const baseMidi = 60;
@@ -472,7 +483,8 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
         const q = filters.search.toLowerCase();
         const nameMatch = scale.name.toLowerCase().includes(q);
         const octatonicMatch = q.includes('octotonic') && biTetradicMap.has(scale.n) && !BARRY_HARRIS_SCALES.has(scale.n);
-        if (!nameMatch && !octatonicMatch) return false;
+        const nonatonicMatch = q.includes('nonatonic') && triTriadicMap.has(scale.n);
+        if (!nameMatch && !octatonicMatch && !nonatonicMatch) return false;
       }
       if (filters.showPrimeOnly && !scale.prime) return false;
       if (filters.showSymmetric && !scale.sym) return false;
@@ -996,12 +1008,16 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         </button>
         <div className="flex-1 min-w-0">
-          <span className="font-medium text-white">
-            {(biTetradics && getOctatonicLabel(scale, biTetradics)) || scale.name || `Scale #${scale.n}`}
-          </span>
-          {!(biTetradics && getOctatonicLabel(scale, biTetradics)) && (
-            <span className="text-gray-400 text-xs ml-2">#{scale.n}</span>
-          )}
+          {(() => {
+            const label = (biTetradics && getOctatonicLabel(scale, biTetradics))
+              || (triTriadics && getNonatonicLabel(scale, triTriadics));
+            return <>
+              <span className="font-medium text-white">
+                {label || scale.name || `Scale #${scale.n}`}
+              </span>
+              {!label && <span className="text-gray-400 text-xs ml-2">#{scale.n}</span>}
+            </>;
+          })()}
         </div>
         <span className="text-gray-400 text-sm flex-shrink-0 hidden sm:inline">
           {formatIntervals(scale.pcs)}
