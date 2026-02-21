@@ -124,4 +124,7 @@ export interface ScaleFilters {
   containsTriad: string | null;
   containsTetrad: string | null;
   intervalPattern: string;
+  minConsecutiveSemitones: number | null;
+  tetradPairSearch: string;
+  showTriTriadic: boolean;
 }

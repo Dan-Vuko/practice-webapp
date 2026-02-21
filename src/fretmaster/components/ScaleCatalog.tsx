@@ -31,10 +31,13 @@ const DEFAULT_FILTERS: ScaleFilters = {
   showFavourites: false,
   showBiTriadic: false,
   showBiTetradic: false,
+  showTriTriadic: false,
   noteCount: null,
   containsTriad: null,
   containsTetrad: null,
   intervalPattern: '',
+  minConsecutiveSemitones: null,
+  tetradPairSearch: '',
 };
 
 const COMMON_TRIADS: { id: string; name: string; pcs: number[] }[] = [
@@ -182,13 +185,13 @@ function ivContainsPattern(iv: number[], pattern: number[]): boolean {
   return true;
 }
 
-// --- Feature 5 & 6: Bi-triadic / Bi-tetradic detection ---
-// Rule: split scale into odd-position degrees (1,3,5,...) and even-position degrees (2,4,6,...).
-// Check if each half forms a recognized triad (for 6-note) or tetrad (for 8-note).
+// --- Bi-triadic / Bi-tetradic / Tri-triadic detection ---
+// Feature 1: Find ALL valid decompositions (not just alternating positions)
 
 type ChordDecomposition = { t1: string; r1: number; pcs1: number[]; t2: string; r2: number; pcs2: number[] };
 type TriadDecomposition = ChordDecomposition;
 type TetradDecomposition = ChordDecomposition;
+type TriTriadicDecomposition = { t1: string; r1: number; pcs1: number[]; t2: string; r2: number; pcs2: number[]; t3: string; r3: number; pcs3: number[] };
 
 // Build lookup: sorted pcs key -> all matching { id, root } entries
 const TRIAD_LOOKUP = new Map<string, { id: string; root: number }[]>();
@@ -211,33 +214,159 @@ for (const tetrad of COMMON_TETRADS) {
   }
 }
 
-// Pick the match whose root equals preferredRoot, or fall back to first match
-function bestMatch(matches: { id: string; root: number }[], preferredRoot: number) {
-  return matches.find(m => m.root === preferredRoot) || matches[0];
+/** Canonical key for a pair of rings — order-independent deduplication */
+function canonicalPairKey(ring1: number, ring2: number): string {
+  return ring1 <= ring2 ? `${ring1}|${ring2}` : `${ring2}|${ring1}`;
 }
 
-function findBiTriadicDecomposition(pcs: number[]): TriadDecomposition | null {
-  if (pcs.length !== 6) return null;
-  const odd = [pcs[0], pcs[2], pcs[4]].sort((a, b) => a - b);
-  const even = [pcs[1], pcs[3], pcs[5]].sort((a, b) => a - b);
-  const matches1 = TRIAD_LOOKUP.get(odd.join(','));
-  const matches2 = TRIAD_LOOKUP.get(even.join(','));
-  if (!matches1 || !matches2) return null;
-  const m1 = bestMatch(matches1, pcs[0]);
-  const m2 = bestMatch(matches2, pcs[1]);
-  return { t1: m1.id, r1: m1.root, pcs1: odd, t2: m2.id, r2: m2.root, pcs2: even };
+/** Canonical key for a triplet of rings — order-independent deduplication */
+function canonicalTripletKey(ring1: number, ring2: number, ring3: number): string {
+  return [ring1, ring2, ring3].sort((a, b) => a - b).join('|');
 }
 
-function findBiTetradicDecomposition(pcs: number[]): TetradDecomposition | null {
-  if (pcs.length !== 8) return null;
-  const odd = [pcs[0], pcs[2], pcs[4], pcs[6]].sort((a, b) => a - b);
-  const even = [pcs[1], pcs[3], pcs[5], pcs[7]].sort((a, b) => a - b);
-  const matches1 = TETRAD_LOOKUP.get(odd.join(','));
-  const matches2 = TETRAD_LOOKUP.get(even.join(','));
-  if (!matches1 || !matches2) return null;
-  const m1 = bestMatch(matches1, pcs[0]);
-  const m2 = bestMatch(matches2, pcs[1]);
-  return { t1: m1.id, r1: m1.root, pcs1: odd, t2: m2.id, r2: m2.root, pcs2: even };
+/** Find ALL valid bi-triadic decompositions of a 6-note scale */
+function findAllBiTriadicDecompositions(pcs: number[]): TriadDecomposition[] {
+  if (pcs.length !== 6) return [];
+  const pcsSet = new Set(pcs);
+  const results: TriadDecomposition[] = [];
+  const seen = new Set<string>();
+
+  for (const triad of COMMON_TRIADS) {
+    for (let r = 0; r < 12; r++) {
+      const transposed = triad.pcs.map(pc => (pc + r) % 12);
+      if (!transposed.every(pc => pcsSet.has(pc))) continue;
+
+      // Remaining notes
+      const remaining = pcs.filter(pc => !new Set(transposed).has(pc)).sort((a, b) => a - b);
+      if (remaining.length !== 3) continue;
+
+      const matches2 = TRIAD_LOOKUP.get(remaining.join(','));
+      if (!matches2) continue;
+
+      // For each matching second triad, create a decomposition
+      for (const m2 of matches2) {
+        const ring1 = pcsToRing(transposed);
+        const ring2 = pcsToRing(remaining);
+        const key = canonicalPairKey(ring1, ring2);
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        results.push({
+          t1: triad.id, r1: r, pcs1: [...transposed].sort((a, b) => a - b),
+          t2: m2.id, r2: m2.root, pcs2: remaining,
+        });
+      }
+    }
+  }
+  return results;
+}
+
+/** Find ALL valid bi-tetradic decompositions of an 8-note scale */
+function findAllBiTetradicDecompositions(pcs: number[]): TetradDecomposition[] {
+  if (pcs.length !== 8) return [];
+  const pcsSet = new Set(pcs);
+  const results: TetradDecomposition[] = [];
+  const seen = new Set<string>();
+
+  for (const tetrad of COMMON_TETRADS) {
+    for (let r = 0; r < 12; r++) {
+      const transposed = tetrad.pcs.map(pc => (pc + r) % 12);
+      if (!transposed.every(pc => pcsSet.has(pc))) continue;
+
+      const remaining = pcs.filter(pc => !new Set(transposed).has(pc)).sort((a, b) => a - b);
+      if (remaining.length !== 4) continue;
+
+      const matches2 = TETRAD_LOOKUP.get(remaining.join(','));
+      if (!matches2) continue;
+
+      for (const m2 of matches2) {
+        const ring1 = pcsToRing(transposed);
+        const ring2 = pcsToRing(remaining);
+        const key = canonicalPairKey(ring1, ring2);
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        results.push({
+          t1: tetrad.id, r1: r, pcs1: [...transposed].sort((a, b) => a - b),
+          t2: m2.id, r2: m2.root, pcs2: remaining,
+        });
+      }
+    }
+  }
+  return results;
+}
+
+/** Feature 2: Find ALL valid tri-triadic decompositions of a 9-note scale */
+function findAllTriTriadicDecompositions(pcs: number[]): TriTriadicDecomposition[] {
+  if (pcs.length !== 9) return [];
+  const pcsSet = new Set(pcs);
+  const results: TriTriadicDecomposition[] = [];
+  const seen = new Set<string>();
+
+  for (const triad of COMMON_TRIADS) {
+    for (let r = 0; r < 12; r++) {
+      const transposed = triad.pcs.map(pc => (pc + r) % 12);
+      if (!transposed.every(pc => pcsSet.has(pc))) continue;
+
+      // Remaining 6 notes — find bi-triadic decompositions of those
+      const remaining = pcs.filter(pc => !new Set(transposed).has(pc));
+      if (remaining.length !== 6) continue;
+
+      const biDecomps = findAllBiTriadicDecompositions(remaining);
+      for (const bd of biDecomps) {
+        const ring1 = pcsToRing(transposed);
+        const ring2 = pcsToRing(bd.pcs1);
+        const ring3 = pcsToRing(bd.pcs2);
+        const key = canonicalTripletKey(ring1, ring2, ring3);
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        results.push({
+          t1: triad.id, r1: r, pcs1: [...transposed].sort((a, b) => a - b),
+          t2: bd.t1, r2: bd.r1, pcs2: bd.pcs1,
+          t3: bd.t2, r3: bd.r2, pcs3: bd.pcs2,
+        });
+      }
+    }
+  }
+  return results;
+}
+
+/** Feature 5: Longest run of consecutive semitones (circular) */
+function longestConsecutiveSemitones(iv: number[]): number {
+  if (iv.length === 0) return 0;
+  // Double the array for circular check
+  const doubled = [...iv, ...iv];
+  let maxRun = 0;
+  let run = 0;
+  for (const step of doubled) {
+    if (step === 1) {
+      run++;
+      maxRun = Math.max(maxRun, run);
+    } else {
+      run = 0;
+    }
+  }
+  // Cap at iv.length (can't exceed the actual scale length)
+  return Math.min(maxRun, iv.length);
+}
+
+/** Feature 4: Vukodian naming for non-BH bi-tetradic scales */
+function getVukodianName(
+  scale: CatalogScale,
+  decomps: TetradDecomposition[],
+  nameMap: Record<string, string>,
+): string | null {
+  if (decomps.length === 0) return null;
+  if (BARRY_HARRIS_SCALES.has(scale.n)) return null;
+
+  // Find "prime" decomposition: first tetrad root matches pcs[0]
+  const prime = decomps.find(d => d.r1 === scale.pcs[0]) || decomps[0];
+  const t1Name = tetradName(prime.t1);
+  const t2Name = tetradName(prime.t2);
+  const catalogName = nameMap[String(scale.n)] || scale.name;
+  const suffix = catalogName ? ` (${catalogName})` : '';
+  return `Vukodian ${t1Name} + ${t2Name}${suffix} #${scale.n}`;
 }
 
 function triadName(id: string): string {
@@ -292,30 +421,46 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
     return m;
   }, [scales]);
 
-  // Feature 5: Bi-triadic decomposition map (hexatonic scales only)
+  // Bi-triadic decomposition map (hexatonic scales only) — now returns ALL decompositions
   const biTriadicMap = useMemo(() => {
-    const map = new Map<number, TriadDecomposition>();
+    const map = new Map<number, TriadDecomposition[]>();
     for (const s of scales) {
       if (s.card !== 6) continue;
-      const d = findBiTriadicDecomposition(s.pcs);
-      if (d) map.set(s.n, d);
+      const decomps = findAllBiTriadicDecompositions(s.pcs);
+      if (decomps.length > 0) map.set(s.n, decomps);
     }
     return map;
   }, [scales]);
 
-  // Feature 6: Bi-tetradic decomposition map (octotonic scales only)
+  // Bi-tetradic decomposition map (octotonic scales only) — now returns ALL decompositions
   const biTetradicMap = useMemo(() => {
-    const map = new Map<number, TetradDecomposition>();
+    const map = new Map<number, TetradDecomposition[]>();
     for (const s of scales) {
       if (s.card !== 8) continue;
-      const d = findBiTetradicDecomposition(s.pcs);
-      if (d) map.set(s.n, d);
+      const decomps = findAllBiTetradicDecompositions(s.pcs);
+      if (decomps.length > 0) map.set(s.n, decomps);
+    }
+    return map;
+  }, [scales]);
+
+  // Tri-triadic decomposition map (9-note scales only)
+  const triTriadicMap = useMemo(() => {
+    const map = new Map<number, TriTriadicDecomposition[]>();
+    for (const s of scales) {
+      if (s.card !== 9) continue;
+      const decomps = findAllTriTriadicDecompositions(s.pcs);
+      if (decomps.length > 0) map.set(s.n, decomps);
     }
     return map;
   }, [scales]);
 
   const filteredScales = useMemo(() => {
     const parsedPattern = parseIntervalPattern(filters.intervalPattern);
+    // Feature 6: parse tetrad pair search terms
+    const tetradSearchTerms = filters.tetradPairSearch
+      ? filters.tetradPairSearch.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
+      : [];
+
     return scales.filter(scale => {
       if (filters.search && !scale.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
       if (filters.showPrimeOnly && !scale.prime) return false;
@@ -326,8 +471,21 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
       if (filters.showFavourites && !favouriteSet.has(scale.n)) return false;
       if (filters.showBiTriadic && !biTriadicMap.has(scale.n)) return false;
       if (filters.showBiTetradic && !biTetradicMap.has(scale.n)) return false;
+      if (filters.showTriTriadic && !triTriadicMap.has(scale.n)) return false;
       if (filters.noteCount !== null && scale.card !== filters.noteCount) return false;
       if (parsedPattern && !ivContainsPattern(scale.iv, parsedPattern)) return false;
+      // Feature 5: chromatic filter
+      if (filters.minConsecutiveSemitones !== null) {
+        if (longestConsecutiveSemitones(scale.iv) < filters.minConsecutiveSemitones) return false;
+      }
+      // Feature 6: tetrad pair search
+      if (tetradSearchTerms.length > 0) {
+        const decomps = biTetradicMap.get(scale.n);
+        if (!decomps) return false;
+        // Every search term must appear in at least one decomposition
+        const allNames = decomps.flatMap(d => [tetradName(d.t1).toLowerCase(), tetradName(d.t2).toLowerCase()]);
+        if (!tetradSearchTerms.every(term => allNames.some(name => name.includes(term)))) return false;
+      }
       if (filters.containsTriad) {
         const triad = TRIAD_MAP.get(filters.containsTriad);
         if (triad) {
@@ -344,14 +502,13 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
       }
       return true;
     });
-  }, [scales, filters, favouriteSet, biTriadicMap, biTetradicMap]);
+  }, [scales, filters, favouriteSet, biTriadicMap, biTetradicMap, triTriadicMap]);
 
-  // Feature 3: Filter counts computed in one pass
   const filterCounts = useMemo(() => {
     const counts: Record<string, number> = {
       showFavourites: 0, showBarryHarris: 0, showPrimeOnly: 0,
       showSymmetric: 0, showChords: 0, showHexatonic: 0,
-      showBiTriadic: 0, showBiTetradic: 0,
+      showBiTriadic: 0, showBiTetradic: 0, showTriTriadic: 0,
     };
     for (const s of scales) {
       if (favouriteSet.has(s.n)) counts.showFavourites++;
@@ -362,9 +519,10 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
       if (s.card === 6) counts.showHexatonic++;
       if (biTriadicMap.has(s.n)) counts.showBiTriadic++;
       if (biTetradicMap.has(s.n)) counts.showBiTetradic++;
+      if (triTriadicMap.has(s.n)) counts.showTriTriadic++;
     }
     return counts;
-  }, [scales, favouriteSet, biTriadicMap, biTetradicMap]);
+  }, [scales, favouriteSet, biTriadicMap, biTetradicMap, triTriadicMap]);
 
   // Group by mode count or prime form
   const groupedScales = useMemo(() => {
@@ -454,7 +612,7 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
-  type FilterKey = 'showPrimeOnly' | 'showSymmetric' | 'showChords' | 'showHexatonic' | 'showBarryHarris' | 'showFavourites' | 'showBiTriadic' | 'showBiTetradic';
+  type FilterKey = 'showPrimeOnly' | 'showSymmetric' | 'showChords' | 'showHexatonic' | 'showBarryHarris' | 'showFavourites' | 'showBiTriadic' | 'showBiTetradic' | 'showTriTriadic';
 
   const toggleFilter = (key: FilterKey) => {
     setFilters(prev => ({ ...prev, [key]: !prev[key] }));
@@ -469,6 +627,7 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
     { key: 'showHexatonic', label: 'Hexatonic' },
     { key: 'showBiTriadic', label: 'Bi-Triadic' },
     { key: 'showBiTetradic', label: 'Bi-Tetradic' },
+    { key: 'showTriTriadic', label: 'Tri-Triadic' },
   ];
 
   return (
@@ -550,6 +709,25 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
             className="bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm text-white w-36"
             title="Search by interval step pattern"
           />
+          <select
+            value={filters.minConsecutiveSemitones ?? ''}
+            onChange={e => updateFilter('minConsecutiveSemitones', e.target.value ? Number(e.target.value) : null)}
+            className="bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm text-white"
+            title="Filter by consecutive semitones"
+          >
+            <option value="">Chromaticism</option>
+            {[2, 3, 4, 5, 6].map(n => (
+              <option key={n} value={n}>{n}+ semitones</option>
+            ))}
+          </select>
+          <input
+            type="text"
+            value={filters.tetradPairSearch}
+            onChange={e => updateFilter('tetradPairSearch', e.target.value)}
+            placeholder="e.g., Maj6, Dim7"
+            className="bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm text-white w-36"
+            title="Search by tetrad pair (comma-separated)"
+          />
           <div className="flex rounded-full overflow-hidden border border-gray-600">
             <button
               onClick={() => setGroupBy('modes')}
@@ -597,8 +775,9 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
                   nameMap={nameMap}
                   scaleMap={scaleMap}
                   expandedRef={expandedScale === scale.n ? expandedRef : undefined}
-                  biTriadic={biTriadicMap.get(scale.n)}
-                  biTetradic={biTetradicMap.get(scale.n)}
+                  biTriadics={biTriadicMap.get(scale.n)}
+                  biTetradics={biTetradicMap.get(scale.n)}
+                  triTriadics={triTriadicMap.get(scale.n)}
                 />
               ))}
             </GroupSection>
@@ -629,8 +808,9 @@ const ScaleCatalog: React.FC<ScaleCatalogProps> = ({
                     nameMap={nameMap}
                     scaleMap={scaleMap}
                     expandedRef={expandedScale === scale.n ? expandedRef : undefined}
-                    biTriadic={biTriadicMap.get(scale.n)}
-                    biTetradic={biTetradicMap.get(scale.n)}
+                    biTriadics={biTriadicMap.get(scale.n)}
+                    biTetradics={biTetradicMap.get(scale.n)}
+                    triTriadics={triTriadicMap.get(scale.n)}
                   />
                 ))}
               </GroupSection>
@@ -705,8 +885,9 @@ interface ScaleRowProps {
   nameMap: Record<string, string>;
   scaleMap: Map<number, CatalogScale>;
   expandedRef?: React.Ref<HTMLDivElement>;
-  biTriadic?: TriadDecomposition;
-  biTetradic?: TetradDecomposition;
+  biTriadics?: TriadDecomposition[];
+  biTetradics?: TetradDecomposition[];
+  triTriadics?: TriTriadicDecomposition[];
 }
 
 const ScaleRow: React.FC<ScaleRowProps> = ({
@@ -720,8 +901,9 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
   nameMap,
   scaleMap,
   expandedRef,
-  biTriadic,
-  biTetradic,
+  biTriadics,
+  biTetradics,
+  triTriadics,
 }) => {
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => new Set());
   const toggleSection = useCallback((id: string) => {
@@ -803,8 +985,13 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         </button>
         <div className="flex-1 min-w-0">
-          <span className="font-medium text-white">{scale.name || `Scale #${scale.n}`}</span>
-          <span className="text-gray-400 text-xs ml-2">#{scale.n}</span>
+          <span className="font-medium text-white">
+            {(biTetradics && getVukodianName(scale, biTetradics, nameMap)) || scale.name || `Scale #${scale.n}`}
+          </span>
+          {/* Only show #N suffix if not already in Vukodian name */}
+          {!(biTetradics && getVukodianName(scale, biTetradics, nameMap)) && (
+            <span className="text-gray-400 text-xs ml-2">#{scale.n}</span>
+          )}
         </div>
         <span className="text-gray-400 text-sm flex-shrink-0 hidden sm:inline">
           {formatIntervals(scale.pcs)}
@@ -840,23 +1027,46 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
             {scale.prime && <span className="px-2 py-0.5 rounded text-xs bg-green-900/50 text-green-400">Prime</span>}
             {scale.sym && <span className="px-2 py-0.5 rounded text-xs bg-purple-900/50 text-purple-400">Symmetric</span>}
             {isBarryHarrisScale(scale) && <span className="px-2 py-0.5 rounded text-xs bg-blue-900/50 text-blue-400">Barry Harris</span>}
-            {biTriadic && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-amber-900/50 text-amber-400">
-                Bi-Triadic: {triadName(biTriadic.t1)}({INTERVAL_NAMES[(biTriadic.r1 - scale.pcs[0] + 12) % 12]}) + {triadName(biTriadic.t2)}({INTERVAL_NAMES[(biTriadic.r2 - scale.pcs[0] + 12) % 12]})
-                <button onClick={(e) => { e.stopPropagation(); playDecomposition(biTriadic); }} className="hover:text-amber-200 transition-colors" title="Play arpeggios">
+            {/* Feature 1 + 3: All bi-triadic decompositions with colored dots */}
+            {biTriadics && biTriadics.map((d, i) => (
+              <span key={`bt3-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-gray-800/80 text-gray-300">
+                <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /><span className="w-2 h-2 rounded-full bg-red-400 inline-block" />
+                {triadName(d.t1)}({INTERVAL_NAMES[(d.r1 - scale.pcs[0] + 12) % 12]}) + {triadName(d.t2)}({INTERVAL_NAMES[(d.r2 - scale.pcs[0] + 12) % 12]})
+                <button onClick={(e) => { e.stopPropagation(); playDecomposition(d); }} className="hover:text-cyan-300 transition-colors" title="Play arpeggios">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                 </button>
               </span>
-            )}
-            {biTetradic && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-teal-900/50 text-teal-400">
-                Bi-Tetradic: {tetradName(biTetradic.t1)}({INTERVAL_NAMES[(biTetradic.r1 - scale.pcs[0] + 12) % 12]}) + {tetradName(biTetradic.t2)}({INTERVAL_NAMES[(biTetradic.r2 - scale.pcs[0] + 12) % 12]})
-                <button onClick={(e) => { e.stopPropagation(); playDecomposition(biTetradic); }} className="hover:text-teal-200 transition-colors" title="Play arpeggios">
+            ))}
+            {/* Feature 1 + 3: All bi-tetradic decompositions with colored dots */}
+            {biTetradics && biTetradics.map((d, i) => (
+              <span key={`bt4-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-gray-800/80 text-gray-300">
+                <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /><span className="w-2 h-2 rounded-full bg-red-400 inline-block" />
+                {tetradName(d.t1)}({INTERVAL_NAMES[(d.r1 - scale.pcs[0] + 12) % 12]}) + {tetradName(d.t2)}({INTERVAL_NAMES[(d.r2 - scale.pcs[0] + 12) % 12]})
+                <button onClick={(e) => { e.stopPropagation(); playDecomposition(d); }} className="hover:text-cyan-300 transition-colors" title="Play arpeggios">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                 </button>
               </span>
-            )}
+            ))}
+            {/* Feature 2 + 3: All tri-triadic decompositions with three colored dots */}
+            {triTriadics && triTriadics.map((d, i) => (
+              <span key={`tt3-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-gray-800/80 text-gray-300">
+                <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /><span className="w-2 h-2 rounded-full bg-red-400 inline-block" /><span className="w-2 h-2 rounded-full bg-green-400 inline-block" />
+                {triadName(d.t1)}({INTERVAL_NAMES[(d.r1 - scale.pcs[0] + 12) % 12]}) + {triadName(d.t2)}({INTERVAL_NAMES[(d.r2 - scale.pcs[0] + 12) % 12]}) + {triadName(d.t3)}({INTERVAL_NAMES[(d.r3 - scale.pcs[0] + 12) % 12]})
+              </span>
+            ))}
             {!scale.prime && <span className="text-xs text-gray-500">Prime form: {nameMap[String(scale.primeNum)] || `#${scale.primeNum}`} (#{scale.primeNum})</span>}
+          </div>
+
+          {/* Feature 8: Mini fretboard preview — moved to top */}
+          <div className="overflow-hidden rounded-lg border border-gray-700/50" style={{ height: '80px' }}>
+            <div style={{ transform: 'scale(0.35)', transformOrigin: 'top left', width: '286%', pointerEvents: 'none' }}>
+              <Fretboard
+                tuning={MINI_TUNING}
+                theme={DEFAULT_THEME}
+                highlightedNotes={miniNotes}
+                onNoteClick={() => {}}
+              />
+            </div>
           </div>
 
           {/* Harmonization — triads & tetrads from each degree */}
@@ -918,7 +1128,7 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
             <DetailSection
               key={`sub-${i}`}
               id={`sub-${i}`}
-              label={<>Subsets ({layer.length}) <span className="normal-case">— remove {i + 1} note{i + 1 > 1 ? 's' : ''}</span></>}
+              label={<>Subsets ({layer.length}) <span className="normal-case">— {scale.card}-note → {scale.card - (i + 1)}-note</span></>}
               collapsed={collapsedSections}
               onToggle={toggleSection}
             >
@@ -939,7 +1149,7 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
             <DetailSection
               key={`sup-${i}`}
               id={`sup-${i}`}
-              label={<>Supersets ({layer.length}) <span className="normal-case">— add {i + 1} note{i + 1 > 1 ? 's' : ''}</span></>}
+              label={<>Supersets ({layer.length}) <span className="normal-case">— {scale.card}-note → {scale.card + (i + 1)}-note</span></>}
               collapsed={collapsedSections}
               onToggle={toggleSection}
             >
@@ -979,18 +1189,6 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
                 </button>
               </div>
             )}
-          </div>
-
-          {/* Mini fretboard preview */}
-          <div className="overflow-hidden rounded-lg border border-gray-700/50" style={{ height: '80px' }}>
-            <div style={{ transform: 'scale(0.35)', transformOrigin: 'top left', width: '286%', pointerEvents: 'none' }}>
-              <Fretboard
-                tuning={MINI_TUNING}
-                theme={DEFAULT_THEME}
-                highlightedNotes={miniNotes}
-                onNoteClick={() => {}}
-              />
-            </div>
           </div>
 
           {/* Visualize button */}
