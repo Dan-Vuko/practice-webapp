@@ -83,6 +83,7 @@ function findTriTriadicSplit(pcs: number[]): [Set<number>, Set<number>, Set<numb
       if (!tr.every(pc => pcsSet.has(pc))) continue;
       const trSet = new Set(tr);
       const rem = pcs.filter(pc => !trSet.has(pc));
+      if (rem.length !== 6) continue;
       const biSplit = findBiTriadicSplit(rem);
       if (biSplit) return [trSet, biSplit[0], biSplit[1]];
     }
