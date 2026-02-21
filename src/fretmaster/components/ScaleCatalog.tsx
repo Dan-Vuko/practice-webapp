@@ -1065,32 +1065,44 @@ const ScaleRow: React.FC<ScaleRowProps> = ({
             {scale.prime && <span className="px-2 py-0.5 rounded text-xs bg-green-900/50 text-green-400">Prime</span>}
             {scale.sym && <span className="px-2 py-0.5 rounded text-xs bg-purple-900/50 text-purple-400">Symmetric</span>}
             {isBarryHarrisScale(scale) && <span className="px-2 py-0.5 rounded text-xs bg-blue-900/50 text-blue-400">Barry Harris</span>}
-            {/* All bi-triadic decompositions with colored dots and degree labels */}
+            {/* All bi-triadic decompositions — each chord colored to match its dot */}
             {biTriadics && biTriadics.map((d, i) => (
-              <span key={`bt3-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-gray-800/80 text-gray-300">
-                <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /><span className="w-2 h-2 rounded-full bg-red-400 inline-block" />
-                {INTERVAL_NAMES[(d.r1 - scale.pcs[0] + 12) % 12]} {triadName(d.t1)} + {INTERVAL_NAMES[(d.r2 - scale.pcs[0] + 12) % 12]} {triadName(d.t2)}
-                <button onClick={(e) => { e.stopPropagation(); playDecomposition(d); }} className="hover:text-cyan-300 transition-colors" title="Play arpeggios">
+              <span key={`bt3-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-gray-800/80">
+                <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
+                <span className="text-blue-400">{INTERVAL_NAMES[(d.r1 - scale.pcs[0] + 12) % 12]} {triadName(d.t1)}</span>
+                <span className="text-gray-500">+</span>
+                <span className="w-2 h-2 rounded-full bg-red-400 inline-block" />
+                <span className="text-red-400">{INTERVAL_NAMES[(d.r2 - scale.pcs[0] + 12) % 12]} {triadName(d.t2)}</span>
+                <button onClick={(e) => { e.stopPropagation(); playDecomposition(d); }} className="text-gray-500 hover:text-cyan-300 transition-colors" title="Play arpeggios">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                 </button>
               </span>
             ))}
-            {/* All bi-tetradic decompositions with colored dots and degree labels */}
+            {/* All bi-tetradic decompositions — each chord colored to match its dot */}
             {biTetradics && biTetradics.map((d, i) => (
-              <span key={`bt4-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-gray-800/80 text-gray-300">
-                <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /><span className="w-2 h-2 rounded-full bg-red-400 inline-block" />
-                {INTERVAL_NAMES[(d.r1 - scale.pcs[0] + 12) % 12]} {tetradName(d.t1)} + {INTERVAL_NAMES[(d.r2 - scale.pcs[0] + 12) % 12]} {tetradName(d.t2)}
-                <button onClick={(e) => { e.stopPropagation(); playDecomposition(d); }} className="hover:text-cyan-300 transition-colors" title="Play arpeggios">
+              <span key={`bt4-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-gray-800/80">
+                <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
+                <span className="text-blue-400">{INTERVAL_NAMES[(d.r1 - scale.pcs[0] + 12) % 12]} {tetradName(d.t1)}</span>
+                <span className="text-gray-500">+</span>
+                <span className="w-2 h-2 rounded-full bg-red-400 inline-block" />
+                <span className="text-red-400">{INTERVAL_NAMES[(d.r2 - scale.pcs[0] + 12) % 12]} {tetradName(d.t2)}</span>
+                <button onClick={(e) => { e.stopPropagation(); playDecomposition(d); }} className="text-gray-500 hover:text-cyan-300 transition-colors" title="Play arpeggios">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                 </button>
               </span>
             ))}
-            {/* All tri-triadic decompositions with three colored dots and degree labels */}
+            {/* All tri-triadic decompositions — each chord colored to match its dot */}
             {triTriadics && triTriadics.map((d, i) => (
-              <span key={`tt3-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-gray-800/80 text-gray-300">
-                <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /><span className="w-2 h-2 rounded-full bg-red-400 inline-block" /><span className="w-2 h-2 rounded-full bg-green-400 inline-block" />
-                {INTERVAL_NAMES[(d.r1 - scale.pcs[0] + 12) % 12]} {triadName(d.t1)} + {INTERVAL_NAMES[(d.r2 - scale.pcs[0] + 12) % 12]} {triadName(d.t2)} + {INTERVAL_NAMES[(d.r3 - scale.pcs[0] + 12) % 12]} {triadName(d.t3)}
-                <button onClick={(e) => { e.stopPropagation(); playTriDecomposition(d); }} className="hover:text-cyan-300 transition-colors" title="Play arpeggios">
+              <span key={`tt3-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-gray-800/80">
+                <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
+                <span className="text-blue-400">{INTERVAL_NAMES[(d.r1 - scale.pcs[0] + 12) % 12]} {triadName(d.t1)}</span>
+                <span className="text-gray-500">+</span>
+                <span className="w-2 h-2 rounded-full bg-red-400 inline-block" />
+                <span className="text-red-400">{INTERVAL_NAMES[(d.r2 - scale.pcs[0] + 12) % 12]} {triadName(d.t2)}</span>
+                <span className="text-gray-500">+</span>
+                <span className="w-2 h-2 rounded-full bg-green-400 inline-block" />
+                <span className="text-green-400">{INTERVAL_NAMES[(d.r3 - scale.pcs[0] + 12) % 12]} {triadName(d.t3)}</span>
+                <button onClick={(e) => { e.stopPropagation(); playTriDecomposition(d); }} className="text-gray-500 hover:text-cyan-300 transition-colors" title="Play arpeggios">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                 </button>
               </span>
